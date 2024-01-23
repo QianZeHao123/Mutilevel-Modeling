@@ -1,0 +1,313 @@
+---
+title: "Multilevel Modelling -- Practical 1 (Week 2)"
+subtitle:
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+fontsize: 12pt
+---
+
+## Instructions -- start here!
+
+The first part of this notebook (**Exercise 1**) takes you through a simple linear regression (using simulated data).
+
+The second part of the notebook (**Exercise 2**) involves a multiple linear regression analysis of hourly wage data.
+
+## Exercises 1
+
+Copy and paste the following code chunk which generates pairs $(x_1,y_1), (x_2,y_2),\ldots,(x_n,y_n)$ where $n=200$.
+
+```{r}
+set.seed(43515) # for reproducibility
+n <- 200
+x <- rnorm(n)
+y <- 2+3*x+rnorm(n,0,1)
+```
+
+We can visualise the data with a scatterplot:
+
+```{r}
+plot(x,y,main="Scatterplot")
+```
+
+1.  What distribution are the $x$ and $y$ values simulated from? Do histograms of $x$ and $y$ values match your answer?
+
+Let $X$ and $Y$ be the random variables that the $x$ and $y$ values are simulated from (respectively). We have that $X\sim N(0,1)$ and $Y|X=x \sim N(2+3x,1)$. Hence $Y\sim N(2,3^2+1^2)\equiv N(0,10)$.
+
+```{r}
+par(mfrow=c(1,2))
+hist(x,freq=FALSE)
+hist(y,freq=FALSE)
+```
+
+![](http://127.0.0.1:41133/chunk_output/s/6E68C8C0/cg798o89qrf71/00002a.png)
+
+Histograms are symmetric about 0 and 2, with most values between $-3$ and $+3$ (mean plus/minus 3 standard deviations) for $x$, and between $-7$ and $+11$ for $y$ (mean plus/minus roughly 3 standard deviations).
+
+2.  Calculate the Pearson correlation coefficient. How does this compare to the theoretical correlation? (Harder: recall that $Cov(X,a+bX)=Cov(X,a)+Cov(X,bX)=bCov(X,X)=bVar(X)$ for constants $a$ and $b$.)
+
+```{r}
+(r.pearson <- cor(x,y))
+```
+
+The theoretical covariance is $Cov(X,Y)=Cov(X,2+3X)=3Var(X)=3$. Hence, the theoretical correlation between $X$ and $Y$ is $3/\sqrt{Var(X)Var(Y)}=3/ \sqrt{10}=0.95$.
+
+We can fit a linear regression model to these data and summarise the output via
+
+```{r}
+model <- lm(y~x)
+summary(model)
+```
+
+3.  Interpret this output. (At least three comments expected here!)
+
+    1.  **Residuals:**
+        -   Residuals are the differences between the observed values and the values predicted by the model. They give an indication of how well the model fits the data.
+        -   Min, 1Q, Median, 3Q, and Max represent different quantiles of the residuals.
+        -   In this case, the residuals range from -4.6323 to 2.9024.
+    2.  **Coefficients:**
+        -   These are the estimated coefficients for the intercept (Intercept) and the independent variable (x).
+        -   For the intercept, the estimate is 1.99094, and for the variable x, the estimate is 2.92914.
+        -   Std. Error is the standard error of the estimate for each coefficient.
+        -   t value is the t-statistic for testing the null hypothesis that the corresponding coefficient is zero.
+        -   Pr(\>\|t\|) is the p-value associated with the t-statistic. In both cases, the p-values are very close to zero, indicating that the coefficients are statistically significant.
+    3.  **Residual standard error:**
+        -   This is an estimate of the standard deviation of the residuals. It provides a measure of the typical size of the errors in predicting the dependent variable.
+        -   In this case, the residual standard error is 1.054.
+    4.  **Multiple R-squared and Adjusted R-squared:**
+        -   Multiple R-squared represents the proportion of the variance in the dependent variable (y) that is predictable from the independent variable (x). In this case, it's 0.8668, indicating a strong relationship.
+        -   Adjusted R-squared adjusts the R-squared value for the number of predictors in the model.
+    5.  **F-statistic and p-value:**
+        -   The F-statistic tests the overall significance of the model. In this case, the F-statistic is 1288 with a very low p-value (\< 2.2e-16), suggesting that the overall model is statistically significant.
+
+    Overall, the model seems to be a good fit for the data, as indicated by the significant coefficients, high R-squared values, and low p-values. The relationship between the dependent variable and the independent variable is statistically significant.
+
+4.  The estimates of the intercept $b_0$ and slope $b_1$ are in agreement with the ground truth values that generated the data ($\beta_0=2$, $\beta_1=3$).
+
+5.  Unsurprisingly, the t-test of the null hypothesis that $H_0:\beta_1=0$ suggests strong evidence against the null: it appears that the slope is needed. The F-test gives the same conclusion.
+
+6.  The coefficient of determination is $R^2=0.8668$ suggesting that almost 90% of the variation in $Y$ is being explained by the regression on $x$. Note that
+
+```{r}
+(r.pearson^2)
+```
+
+gives $R^2$.
+
+4.  Reproduce the scatterplot and overlay the regression line. Hint: recall the `abline()` function and note that `coef(model)` gives the estimated intercept and slope.
+
+```{r}
+plot(x,y)
+abline(coef(model))
+```
+
+In what follows, it will be helpful to work with sorted (in increasing order) values of $x$ and the associated values of $y$. Hence execute the following code:
+
+```{r}
+ind <- sort(x,index.return=TRUE)
+x <- x[ind$ix]
+y <- y[ind$ix]
+model <- lm(y~x)
+```
+
+Recall that the `predict()` function can be used to generate fitted values $\hat{y}_i$, confidence and prediction intervals. The following code generates fitted values and the lower limits of a 95% confidence interval for the mean response $b_0+b_1 x_i$:
+
+```{r}
+fit.y <- predict(model,newdata = data.frame(x),interval = "confidence")
+head(fit.y) #inspect first few rows
+```
+
+5.  Overlay (in red) the 95% confidence interval for the expected response $b_0+b_1 x_i$ for each $x_i$. Hint: `lines()` will be useful here.
+
+```{r}
+plot(x,y)
+abline(coef(model))
+lines(x,fit.y[,2],type="l",col="red")
+lines(x,fit.y[,3],type="l",col="red")
+```
+
+6.  By using the `predict()` function with `interval = "prection"`, overlay (in green) the 95% prediction interval for each $y_i$. Comment.
+
+```{r}
+fit.yp <- predict(model,newdata = data.frame(x),interval = "prediction")
+plot(x,y)
+abline(coef(model))
+lines(x,fit.y[,2],type="l",col="red")
+lines(x,fit.y[,3],type="l",col="red")
+lines(x,fit.yp[,2],type="l",col="green")
+lines(x,fit.yp[,3],type="l",col="green")
+```
+
+The prediction interval is wider than the confidence interval, as expected (recall that the prediction interval takes into account the variance of the error term).
+
+7.  Check the regression assumptions of `model`.
+
+```{r}
+plot(model)
+```
+
+The Q-Q plots suggests that the normality assumption is reasonable. Plots of the residuals against fitted values show no obvious pattern (i.e. no fanning out; the constant variance assumption appears reasonable, and no systematic shape; the linear relationship between response and predictors appears reasonable). The last plot indicates some outliers but these do not appear to be of high leverage (according to Cook's distance) so it is not necessary to remove them. All of these comments are as expected since we've simulated the data from a simpler linear regression model so we'd be surprised if it didn't fit well!
+
+8.  Let's add an outlying data point to our synthetic data set and look at the resulting scatter plot:
+
+```{r}
+x <- c(x,0)
+y <- c(y, 15)
+plot(x,y,main="Scatter plot with outlier")
+```
+
+Fit the simple regression model again (call it `model_out1`) and check the assumptions. What do you notice?
+
+```{r}
+model_out1 <- lm(y~x)
+plot(model_out1)
+```
+
+The assumptions look reasonable. The outlier is not influential (Cook's distance is less than 1 for the outlier). In fact, we can see that the outlier appears to have almost no affect on the line of best fit, whether it's included or not.
+
+```{r}
+plot(x,y)
+abline(coef(model_out1))
+abline(coef(model),col=2) #least squares line without the outlier
+```
+
+9.  Let's add another outlying data point to our synthetic data set and look at the resulting scatter plot:
+
+```{r}
+x <- c(x,3)
+y <- c(y, 30)
+plot(x,y,main="Scatter plot with two outliers")
+```
+
+Fit the simple regression model again (call it `model_out2`) and check the assumptions. What do you notice?
+
+```{r}
+model_out2 <- lm(y~x)
+plot(model_out2)
+```
+
+The second outlier has high leverage (Cook's distance greater than 1). In fact, you can see the effect of including it in the data set via:
+
+```{r}
+plot(x,y)
+abline(coef(model_out2))
+abline(coef(model),col=2) #least squares line without the outlier
+```
+
+The line of best fit obtained with the (second) outlier included in the data, has a steeper slope than that obtained without the (second) outlier.
+
+## Exercises 2
+
+This exercise concerns the data set `hwages` consisting of 534 observations on 7 variables. We will focus on the following variables:
+
+-   `wages` - hourly wage (in dollars). We will treat this as the response.
+-   `workexp` - work experience in years.
+-   `education` - schooling in years.
+-   `sector` - 0 for private and 1 for public (e.g. hospital, school etc).
+
+Read in the data from Andy's Github page with
+
+```{r}
+hwages <- 
+   read.csv(file="https://andygolightly.github.io/teaching/MATH43515/hwages.csv")
+```
+
+Let's also explicitly store the columns we will need as seperate variables:
+
+```{r}
+data <- hwages 
+wages <- data$wages #response / dependent variable
+workexp <- data$workexp 
+educ <- data$education 
+sector <- as.factor(data$sector)
+```
+
+1.  Plot a histogram of the dependent variable (`wages`). Do you see any skewness? Is this a problem?
+
+```{r}
+hist(wages,main="Histogram of wages (dollars per hour)")
+```
+
+Indeed there is some skewness although this is not necessarily a problem. A skewed dependent variable does not violate any assumptions since we require normality of residuals, not variables.
+
+Let's transform the response variable via the natural logarithm:
+
+```{r}
+lwages <- log(wages)
+```
+
+2.  How does a histogram of `lwages` compare to that in part 1?
+
+```{r}
+par(mfrow=c(1,2))
+hist(wages,main="wages")
+hist(lwages,main="ln wages")
+```
+
+The right skew appears to be alleviated by the transformation.
+
+3.  Denote by $y_i$ the value of the **log wage** for person $i$. Fit the model
+
+$$ Y_i = \beta_0 + \beta_1 \textrm{education}_i + \beta_2 \textrm{sector}_i + \epsilon_i, \quad i=1,\ldots,n $$ with the result stored in `model1`. What do the results suggest for the predicted public sector hourly wage vs private? Hint: use `lm()` and `summary()`. Be careful with the interpretation - recall that the response is the natural logarithm of hourly wage.
+
+```{r}
+model1 <- lm(lwages~educ+sector)
+summary(model1)
+```
+
+We see that the estimate of the variable `sector` is $-0.232$. Hence, with the `educ` variable held constant, the model suggests that average hourly log wages are reduced by $-0.232$ for public sector workers. Hence, actual average hourly wage is reduced by a factor of $(1-\exp(-0.232))\times 100=20\%$.
+
+4.  We can setup functions to evaluate the equations of the two lines (one for `sector=0` and one for `sector=1`) as functions of the variable `educ` as follows:
+
+```{r}
+eq1 <- function(educ){coef(model1)[1]+coef(model1)[2]*educ} #private
+eq2 <- function(educ){coef(model1)[1]+coef(model1)[2]*educ+coef(model1)[3]} #public
+```
+
+Plot the fitted line by sector.
+
+```{r}
+x <- seq(min(educ),max(educ),0.1) #set up educ values at which to evaluate line
+plot(educ,lwages)
+lines(x,eq1(x),type="l",col="red") #private
+lines(x,eq2(x),type="l",col="green") #public
+```
+
+As expected, the lines have the same slope but the line for `sector=1` is shifted by the amount $b_3=-0.232$.
+
+5.  Add the variable named `workexp` to `model1` (that is, fit the multiple linear regression model with this additional predictor variable). Name the resulting model `model2`.
+
+```{r}
+model2 <- lm(lwages~educ+sector+workexp)
+```
+
+6.  Interpret the coefficients of `model2` in the context of both wage and log wage.
+
+```{r}
+summary(model2)
+```
+
+We have that $b_1=0.098$, $b_2=-0.256$ and $b_3=0.013$. Hence, an additional year of schooling increases average log wage by 0.098 (with the other variables held constant). An additional year of work experience increases log wage by 0.013. The average hourly log wage for public sector workers appears to be 0.256 (log dollars) lower than for private sector workers. Working with log wages makes interpretation difficult. A better interpretation here is to look at the percentage increase or decrease resulting from a unit change in one variable (while keeping the others constant). For example, the percentage increase in average wage resulting from an additional year of schooling is $(\exp(0.098)-1)\times 100=10\%$ (with the other variables held constant).
+
+7.  What does the adjusted $R^2$ suggest about `model2` compared to `model1`?
+
+The adjusted R-squared is 0.2655 for `model2` versus 0.1898 for `model1` suggesting a reasonable improvement in explained variation when moving to `model2`. These values are quite small though; only $27\%$ of the variation in the response is explained by the regression on `educ`, `sector` and `workexp` is not great from a performance perspective!
+
+8.  Run the command `anova(model1, model2)`. Which model (`model1` or `model2`) is preferred?
+
+```{r}
+anova(model1, model2)
+```
+
+We see that the test statistic is large (much bigger than 1) and the p-value is very small (certainly much smaller than 5%) suggesting strong evidence against the null hypothesis that the larger model offers no improvement in fit compared to the simpler model. The conclusion is that the additional `workexp` variable is needed.
+
+9.  Check the regression assumptions of `model2`.
+
+```{r}
+plot(model2)
+```
+
+The Q-Q plots suggests that the normality assumption is reasonable. Plots of the residuals against fitted values show no obvious pattern (i.e. no fanning out; the constant variance assumption appears reasonable, and no systematic shape; the linear relationship between log wages and predictors appears reasonable). The last plot indicates some outliers but these do not appear to be of high leverage (according to Cook's distance) so it is not necessary to remove them.
+
+End of lab!
