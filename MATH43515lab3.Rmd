@@ -1,0 +1,374 @@
+---
+title: "Multilevel Modelling - Practical 3 (Week 4)"
+subtitle: 
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+## Instructions -- start here!
+
+**Exercise 1** takes you through the analysis carried out in Lecture 4 of this module. **Exercise 2** allows you to produce some additional analysis using the 1982 High School and Beyond Survey data introduced in the previous practical.
+
+We initially load the R packages *haven*, *ggplot2*, *lme4* and *lmerTest*. Further R packages will be loaded where needed.
+
+```{r}
+require(haven)      # to load the SPSS .sav file
+require(ggplot2)    # used for production of graphs
+require(lme4)       # used for fitting random effect models
+require(lmerTest)   # used in hypothesis testing
+```
+
+## Exercise 1
+
+This is a continuation of Exercise 1 from the previous practical. Last week, we considered an exploratory analysis of the student popularity data set. We will now consider a two-level multilevel model for the response variable (popularity, $y$) using the extraversion covariate ($x$).
+
+### Preparation of the data set
+
+We prepare the data as previously:
+
+```{r}
+pop.rawdata <- 
+  read_sav(file="https://github.com/MultiLevelAnalysis/Datasets-third-edition-Multilevel-book/blob/master/chapter%202/popularity/SPSS/popular2.sav?raw=true")
+```
+
+Re-label some columns as before:
+
+```{r}
+pop.data <-
+  pop.rawdata[, c("pupil", "class", "extrav", "sex", "texp", "popular")]
+
+colnames(pop.data) <-
+  c("pupil",
+    "class",
+    "extraversion",
+    "gender",
+    "experience",
+    "popularity")
+
+head(pop.data) # we have a look at the first 6 observations
+```
+
+$~$
+
+### Fitting the random intercept and slope model
+
+The model takes the form
+
+$$y_{ij}=a + b x_{ij} + u_j +v_j x_{ij} +\epsilon_{ij} $$ where $u_j\sim N(0,\sigma^2_u)$, $v_j \sim N(0,\sigma^2_v)$ and the independent error terms are $\epsilon_{ij} \sim N(0,\sigma^2)$.
+
+The following is the code to fit a random intercept and slope model (and summarise):
+
+```{r}
+model1 <- lmer(formula = popularity ~ 1+extraversion+(1+ extraversion|class), data = pop.data) 
+summary(model1)
+```
+
+Note the warning message about potential lack of convergence. A better optimiser should solve this issue:
+
+```{r,eval=FALSE}
+model1 <- lmer(formula = popularity ~  1+ extraversion +(1+ extraversion|class), data = pop.data, control = lmerControl(optimizer ="Nelder_Mead")) 
+summary(model1)
+```
+
+If you execute the above code chunk, you'll see that the difference in estimated coefficients is very small (typically 4th decimal place) making us less concerned about the initial warning.
+
+**TASK:** Interpret the summarised model output.
+
+<details>
+
+<summary>Click for solution</summary>
+
+-   The expected popularity rises by 0.49286 per extra point of extraversion.
+-   There is considerable variation between classes: The random effect variances are $\sigma^2_u=2.9968$ and $\sigma^2_v=0.02595$.
+-   The random effects are strongly negatively correlated (-0.97): For classes where the popularity is generally larger, increasing extraversion will have less additional effect.
+
+</details>
+
+$~$
+
+### Fitted lines by class
+
+The following R code plots the fitted regression lines for each class.
+
+```{r, message=FALSE}
+pop.data$pred1 <- predict(model1)
+
+ggplot(pop.data, 
+       aes(x= extraversion, y = popularity, col = class, group = class))+
+       geom_line(aes(y=pred1, group=class, col=class)) +
+       scale_color_gradientn(colours = rainbow(100)) 
+```
+
+**TASK:** Predicted values are given by
+
+$$\hat{y}_{ij}=\hat{a}+\hat{b}x_{ij}+\hat{u}_j+\hat{v}_jx_{ij}$$.
+
+The first fitted value is $\hat{y}_{11}=$ `r pop.data$pred1[1]`. By using `fixef` to extract the fixed effects $\hat{a}$ and $\hat{b}$, and `ranef` to extract the random effects $\hat{u}_1$ and $\hat{v}_1$, directly calculate $\hat{y}_{11}$ and make sure it agrees with the above value.
+
+<details>
+
+<summary>Click for solution</summary>
+
+```{r}
+fix <- as.numeric(fixef(model1))
+ranef1 <- as.numeric(ranef(model1)$class[1,])
+newx <- c(1, pop.data$extraversion[1])
+fix%*%newx +ranef1%*%newx
+```
+
+</details>
+
+$~$
+
+### The intercept-only / empty model and ICC
+
+Recall that the empty model is
+
+$$y_{ij}=\gamma_0 + u_j +\epsilon_{ij}$$
+
+The following code fits the empty model and summarises output.
+
+```{r}
+intercept.only.model <- lmer(formula = popularity ~ 1 + (1|class),data    = pop.data) 
+summary(intercept.only.model)  
+```
+
+**TASK:** Calculate and interpret the intra-class correlation (ICC).
+
+<details>
+
+<summary>Click for solution</summary>
+
+Method 1: read off the estimates of $\sigma^2_u$ and $\sigma^2$ from the output above.
+
+```{r}
+rho= 0.7021/(0.7021+1.2218)
+rho
+```
+
+Method 2: extract the relevant estimates directly:
+
+```{r}
+vars <- as.data.frame(summary(intercept.only.model)$varcor)$vcov
+(rho <- vars[1]/sum(vars))
+```
+
+Method 3: the following package can also be used to calculate ICC.
+
+```{r,message=FALSE}
+require(performance)
+# https://easystats.github.io/performance/reference/icc.html
+icc(intercept.only.model)
+```
+
+</details>
+
+$~$
+
+### The random intercept model (with covariate)
+
+Now let's look at the random intercept model with a fixed effect for extraversion. The model is
+
+$$y_{ij}=a+b x_{ij}+u_j+\epsilon_{ij}$$
+
+We can fit and summarise via:
+
+```{r}
+model0 <- lmer(formula = popularity ~  1+ extraversion +(1|class), data    = pop.data) 
+summary(model0)
+```
+
+**TASK:** Add a column to the `pop.data` data frame called `pred0` containing the predicted responses from this model. Hence, produce a plot of the regression lines (obtained from this model) for each class (also coloured by class).
+
+<details>
+
+<summary>Click for solution</summary>
+
+The following R code generates predicred responses and plots the fitted regression lines for each class.
+
+```{r, message=FALSE}
+pop.data$pred0 <- predict(model0)
+
+ggplot(pop.data, 
+       aes(x= extraversion, y = popularity, col = class, group = class))+
+       geom_line(aes(y=pred0, group=class, col=class)) +
+       scale_color_gradientn(colours = rainbow(100)) 
+```
+
+Notice that all the slopes are the same, as expected! Whether or not random slopes are needed (and how we decide this) will be explored later in the course.
+
+</details>
+
+$~$
+
+**Harder (deeper thinking):** please spend at least 15 mins thinking about the following before uncovering the solution details (talk also to each other and Andy about it).
+
+We have a class level covariate - teacher experience. How can we include this in the model above (random intercept model)? One possibility is to try to use this covariate to explain some of the variation in the random intercept values.
+
+The random intercept model has $a_j=a+u_j$ where $u_j\sim N(0,\sigma^2_u)$. Let $\text{exp}_j$ denote teacher experience (in years) for class $j$. How should we modify $a_j$ to include the $\text{exp}$ covariate? Write out the resulting model in the form $y_{ij}= \ldots$ and fit the model in R. Is the experience covariate needed?
+
+<details>
+
+<summary>Click for solution</summary>
+
+"Regress" the $a_j$ on $\text{exp}$ to give
+
+$$a_j = a + \alpha \text{exp}_j +u_j$$ where $u_j\sim N(0,\sigma^2_u)$. Hence, the full model becomes
+
+$$y_{ij}=a +\alpha \text{exp}_j + b x_{ij} + u_j + \epsilon_{ij} $$ We can fit this model in R via:
+
+```{r}
+model2 <- lmer(formula = popularity ~  1+ extraversion + experience +(1|class), data    = pop.data) 
+summary(model2)
+```
+
+A test of the null hypothesis that $\alpha=0$ (after adjusting for extraversion) would be rejected (easily) at the $5\%$ level. It looks like the experience covariate is needed here.
+
+</details>
+
+$~$
+
+**Even deeper:** The random intercept and slope model has $b_j=b+v_j$ where $v_j\sim N(0,\sigma^2_v)$. How should we modify $b_j$ to include the $\text{exp}$ covariate? Write out the resulting model in the form $y_{ij}= \ldots$. If done correctly, this should give an interaction term of the form $\text{exp}_j x_{ij}$.
+
+$~$
+
+## Exercise 2
+
+### Preparation
+
+This is a continuation of Exercise 3 from the previous practical.
+
+We continue now with the analysis of the Maths achievement scores from the 1982 High School and Beyond Survey. As on the last worksheet, load the data into your workspace via:
+
+```{r}
+sub_hsb <- 
+   read.csv(file="https://andygolightly.github.io/teaching/MATH43515/sub_hsb.csv")
+```
+
+Carry out the following operations for simple access of variables.
+
+```{r}
+data <- sub_hsb
+mathach <- data$mathach # Maths achievement score (response)
+ses <- data$ses
+female <- data$female
+school.f <- as.factor(data$schid) #I'm using .f for factor in the variable name
+colnames(data)
+```
+
+Recall that the full dataset can be found within the package [merTools](https://rdrr.io/cran/merTools/man/hsb.html). Click the link to read about the data set.
+
+$~$
+
+### The random intercept model
+
+As in Exercise 1, to specify random effects, apply the same formula as that for linear regression using the function `lmer` instead of `lm`. We begin with the random intercept model, including a fixed effect for `ses` (a measure of socio-economic status).
+
+A random intercept for the upper level (in this case, school) will be coded as `(1|school.f)`.
+
+```{r}
+model.rint <- lmer(mathach ~ ses + (1 | school.f), data=data)
+summary(model.rint)
+```
+
+**TASK:** Interpret the output, find the ICC.
+
+$~$
+
+We now extract and visualize fitted values vs. the linear model: to do this with `ggplot`, add the main plot (`ggplot(...)`) including a line (`geom_line()`) indicating the predictions acquired from `predict(Model1)` and the grouping structure (school). Note that `geom_point()` includes the data points for reference.
+
+```{r, message=FALSE}
+data$pred1 <- predict(model.rint)
+
+model1_int <- ggplot(data, aes(ses,mathach))+
+  geom_line(aes(y=pred1,group=school.f, 
+                col=school.f))+
+  geom_point(aes(ses,mathach, 
+                 col=school.f), 
+             size = 0.8,
+             alpha = .8)+ 
+  geom_smooth(method="lm", 
+              se=FALSE, 
+              col="Red")+
+  ggtitle("Multilevel model (Model1)", 
+          subtitle="Random Intercept only") +
+  xlab("Ses") + 
+  ylab("Mathach")+
+  theme(legend.position = "none")
+model1_int
+```
+
+The results of the above regression illustrate the importance of accounting for a multilevel structure. It is evident that had we used a simple linear regression (red line), we would have inadvertently overestimated the mean effect of `ses`. This is also easy to see by inspecting the model summary of the linear model, where `ses` has a coefficient of 3.45 while in the multilevel specification a coefficient of 2.12 with a random intercept variance that is considerably greater than zero with a value of 6.33.
+
+$~$
+
+### Diagnostics
+
+Now we visualise results and conduct some diagnostic checks, in order to check for the adequacy of modelling assumptions. ALthough we have not (up until now) considered diagnostics in the multilevel context, we proceed as in the linear regression case, by checking normality of residuals and additionally, normality of the random effects!
+
+We start by plotting the residuals vs the fitted values.
+
+```{r}
+plot(model.rint)
+```
+
+Ideally, we should see here just random noise, that is no pattern at all. This is reasonably fulfilled, however there is impression of a diagonal field-like shape spanning from the top left to the bottom right. This likely indicates that a predictor variable which would have explained this slope has been omitted.
+
+$~$
+
+Continue with inspection of model assumptions by looking at quantile-quantile plots for the residuals and random effects:
+
+```{r}
+qqnorm(resid(model.rint))
+qqline(resid(model.rint), 
+       col = "red") 
+
+qqnorm(ranef(model.rint)$school.f[,1]) # check random effects
+qqline(ranef(model.rint)$school.f[,1], 
+       col = "red")
+```
+
+The QQ plots also look fairly acceptable (close to y=x line), indicating that the assumption of normality of the error terms and of the random effects is reasonably fulfilled.
+
+$~$
+
+### Include a second fixed effect variable: gender
+
+We will now perform multilevel modelling using random intercepts, this time including the dummy variable for female:
+
+```{r}
+model2.rint <- lmer(mathach ~ ses + female + (1 | school.f), data=data)
+#summary(model2.rint) #uncomment if you'd like to interogate the model output
+```
+
+$~$
+
+We will plot the fitted values, categorised by gender. We want two plots, side-by-side, showing the fitted lines for each school.
+
+```{r, message=FALSE}
+data$pred2 <- predict(model2.rint)
+
+gender_names <- c("0" ="Male","1"="Female") #define labels for facet_grid
+
+model2_int <- ggplot(data,aes(ses,mathach))+
+  geom_line(aes(y=pred2,group=school.f, col=school.f))+
+  geom_point(aes(ses,mathach, col=school.f),
+             size = 0.8,
+             alpha = .8)+ 
+  geom_smooth(method="lm", 
+              se=FALSE, col="Red")+
+   ggtitle("Multilevel model (Model2)", 
+           subtitle="By Gender") +
+  facet_grid(~female, 
+             labeller = as_labeller(gender_names))+
+  xlab("Ses") + 
+  ylab("Mathach")+
+  theme(legend.position = "none")
+model2_int
+```
+
+There is a lot going on here! Try to understand each line, and what is being plotted. Consider writing out the mathematical form of the model, or discuss with each other / Andy as to what this form takes.
+
+\*\* End of lab!
