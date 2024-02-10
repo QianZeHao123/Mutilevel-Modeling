@@ -1,0 +1,269 @@
+---
+title: "Multilevel Modelling - Practical 4 (Week 5)"
+subtitle:
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+## Instructions -- start here!
+
+In this lab we will analyse the ``Active Time'' data set considered at the end of the Lecture 5 slides. This lab is a little shorter than previous labs to allow time to understand the 3-level structure of the data and appropriate models. 
+
+We initially load the packages we need.
+
+```{r,message=FALSE,warning=FALSE}
+require(lme4)
+require(lmerTest)
+require(ggplot2)
+```
+
+## Exercise 1: Analysis of the Active Time study data (lecture 5)
+ 
+Read in the data as follows. 
+ 
+```{r, echo=TRUE}
+Sim3level <- 
+  read.csv("https://andygolightly.github.io/teaching/MATH43515/Sim3level.csv")
+```
+
+Visually inspect the data frame. 
+```{r}
+head(Sim3level)
+```
+
+We have the following variables:
+
+* `Math` maths score on $(0,100)$ (response variable)
+* `ActiveTime` a standardised (to $(0,1)$) measure of physical activity (covariate)
+* `ClassSize` the size of a given class (covariate)
+* `Classroom` Class identifier
+* `School` School identifier
+* `StudentID` student identifier 
+
+We have a 3-level structure with students nested in classes in schools. Plainly, we have `ActiveTime` at the student level and `ClassSize` at the class level.
+
+We can see the number of schools, classrooms within each school and number of students in each class via
+
+```{r}
+tapply(Sim3level$Classroom,Sim3level$School,table)
+```
+For example, school 1 has 10 classes, with student numbers ranging from 12 to 20.
+
+$~$
+
+### How important is group structure? (VPCs and ICCs)
+
+Let $y_{ijk}$ denote the response `maths` for student $i$ in class $j$ in school $k$. The random intercept only (empty) model is:
+
+$$y_{ijk} = \gamma_0 +u_{jk}+v_k+\epsilon_{ijk}$$
+where $u_{jk}\sim N(0,\sigma^2_u)$ is the random effect for classroom, $v_k\sim N(0,\sigma^2_v)$ is the random effect for school and $\epsilon_{ijk}\sim N(0,\sigma^2)$ is the usual error term. All random variables here are assumed independent.
+
+$~$
+
+We fit and summarise the random intercept only (empty model) via:
+
+```{r}
+Model.0 <- lmer(Math ~ 1
+                 +(1|School)
+                 +(1|School:Classroom),  
+                 data=Sim3level)
+summary(Model.0)
+```
+
+We can then extract the estimated variance components from the model via:
+
+```{r, echo=TRUE}
+REsummary <- as.data.frame(VarCorr(Model.0))
+REsummary
+```
+
+(*Note*:  Alternatively you could use `summary(Model.0)$varcor`.)
+
+**TASK:** Find and interpret all VPC and ICC values.
+
+<details><summary>Click for solution</summary>
+
+VPC estimates 
+
+```{r}
+sig <- REsummary$vcov[3]  #Residual variance
+sigv <- REsummary$vcov[2] #RE variance for school
+sigu <- REsummary$vcov[1] #RE variance for class
+totalvar <- sum(REsummary$vcov) #total variance
+vpc.school <- sigv/totalvar 
+
+vpc.class <- sigu/totalvar 
+vpc.school
+vpc.class
+``` 
+ 
+ICC estimates
+ 
+```{r} 
+icc.school <- sigv/totalvar 
+
+icc.class <- (sigu+sigv)/totalvar 
+ 
+icc.school
+icc.class
+```
+We have 26% response variation at the class level and 53% at the school level. Variability between schools is more than between classes. The ICC for class is 79% i.e. very large! Recall that this gives the correlation between two students in the same classroom in the same school. This correlation is largely "driven" by the school level ICC (53%) which is the correlation between two students in the same school but different classrooms. 
+</details>
+
+$~$
+
+### Three level Model with explanatory variables
+
+The random intercept model with covariates for `ActiveTime` and `ClassSize` is given by
+
+$$y_{ijk}=a+b_{1}\text{ActiveTime}_{ijk}+b_2\text{Class}_{jk}+u_{jk}+v_{k}+\epsilon_{ijk}$$
+
+We fit this model with the code:
+
+```{r, echo=TRUE}
+Model.1 <- lmer(Math ~ ActiveTime+ClassSize
+                 +(1|School)
+                 +(1|School:Classroom),  
+                 data=Sim3level)
+summary(Model.1)
+```
+
+Note that the above can be equivalently executed via
+
+```{r,eval=FALSE}
+Model.1 <- lmer(Math ~ ActiveTime+ClassSize
+                 +(1|School/Classroom),  
+                 data=Sim3level)
+```
+
+### Comparison of empty model with model with explanatory variables
+
+To test the null hypothesis that $b_1=0$ and $b_{2}=0$ against an alternative that at least one of these fixed effects is not 0, we can use 
+```{r, echo=TRUE}
+anova(Model.0, Model.1)
+```
+Plainly, the null hypothesis is rejected, suggesting that explanatory variables are needed. BUT, do we need both? Look at the output of:
+```{r,eval=FALSE}
+summary(Model.1)
+```
+Is `ClassSize` needed? I think not!
+
+### Further analysis (bottom up approach)
+
+**TASK:** How does the model without the `ClassSize` covariate (say `Model.2`)  compare to `Model.1`?  This question is really asking is how the deviance changes from `Model.1` to `Model.2`. We know that the simpler `Model.2` will have a bigger deviance than `Model.1`. BUT, if this difference is very small, we should prefer the simpler model. Test this hypothesis formally using the `anova()` function (after first creating `Model.2` using `lmer()`).
+
+<details><summary>Click for solution</summary>
+Remove `ClassSize` and refit:
+
+```{r}
+Model.2 <- lmer(Math ~ ActiveTime
+                 +(1|School/Classroom),  
+                 data=Sim3level)
+summary(Model.2)
+```
+Now compare models with and without the `ClassSize` fixed effect:
+
+```{r, echo=TRUE}
+anova(Model.2, Model.1)
+```
+The change in deviance is tiny! We have insufficient evidence against the null hypothesis that the fixed effect for `ClassSize` is zero. We therefore retain the null and conclude that `ClassSize` is not needed. 
+</details>
+
+$~$
+
+**TASK:** Is a random slope needed (allowing a different slope for `ActiveTime` in each class)? Create `Model.3` using `lmer()` with the inclusion of a random slope for `ActiveTime`. Test the null hypothesis that the random slope variance is zero using `ranova(Model.3)`.  
+
+<details><summary>Click for solution</summary>
+Now let's add a random slope for `ActiveTime`:
+```{r,echo=TRUE}
+Model.3 <- lmer(Math ~ ActiveTime
+                 +(1|School)
+                 +(1+ActiveTime|School:Classroom),  
+                 data=Sim3level)
+```
+Now test to see if the random slope variance can be assumed zero or not:
+```{r}
+ranova(Model.3)
+```
+which suggests that the random slope is needed. 
+</details>
+
+$~$
+
+**TASK:** Is the resulting model a good fit (check diagnostics)? Try `plot(Model.3)` then use `resid()` and `ranef()` to get estimated residuals and random effects. For the latter, note that a list will be returned, with the first list item holding the estimated intercepts and slopes  the class level, and the second list item holding the estimated intercepts at the school level. 
+
+<details><summary>Click for solution</summary>
+Diagnostics:
+
+```{r}
+plot(Model.3)
+qqnorm(resid(Model.3))
+qqline(resid(Model.3))
+```
+```{r}
+qqnorm(ranef(Model.3)[[1]][,1])
+qqline(ranef(Model.3)[[1]][,1])
+qqnorm(ranef(Model.3)[[1]][,2])
+qqline(ranef(Model.3)[[1]][,2])
+
+#qqnorm(ranef(Model.3)[[2]][,1])
+#qqline(ranef(Model.3)[[2]][,1]) #Omit as only 3 schools!
+```
+
+I think the fit looks reasonable - why?
+</details>
+
+$~$
+
+**TASK (harder):** How can we visualise the fit of `Model.3`? Recall the `predict` function and use `ggplot()` to produce a graph showing fitted lines for all classrooms in school 1. 
+
+<details><summary>Click for solution</summary>
+```{r}
+Sim3level$pred <- predict(Model.3)
+ggplot(Sim3level[Sim3level$School=="Sch1",],
+       aes(x=ActiveTime,y=Math,col=Classroom,group=Classroom))+
+  geom_line(aes(y=pred))+
+  scale_color_gradientn(colours=rainbow(100))
+```
+</details>
+
+$~$
+
+**Understanding the model**: `Model.3` can be written mathematically as
+
+$$y_{ijk}=a+b\text{ActiveTime}_{ijk}+w_{jk}\text{ActiveTime}_{ijk}+u_{jk}+v_{k}+\epsilon_{ijk}$$
+with $w_{jk}\sim N(0,\sigma^2_w)$ representing the random slopes (we get a different one for each classroom and school combination). We can visualise the fitted model in all 3 schools:
+
+```{r,echo=FALSE}
+Sim3level$pred <- predict(Model.3)
+ggplot(Sim3level,
+       aes(x=ActiveTime,y=Math,col=Classroom,group=Classroom))+
+  facet_wrap(~School)+
+  geom_line(aes(y=pred))+
+  scale_color_gradientn(colours=rainbow(100))
+```
+
+<details><summary>Click for the code to see the above</summary>
+```{r,eval=FALSE}
+Sim3level$pred <- predict(Model.3)
+ggplot(Sim3level,
+       aes(x=ActiveTime,y=Math,col=Classroom,group=Classroom))+
+  facet_wrap(~School)+
+  geom_line(aes(y=pred))+
+  scale_color_gradientn(colours=rainbow(100))
+```
+</details>
+
+The plots above make clear the role of the random intercept and slope terms at the classroom level; the fitted line for each classroom $j$ within a school $k$ has its own intercept $a+u_{jk}+v_{k}$ and slope $b+w_{jk}$. Hence, $a$ gives the average intercept value, the $v_{k}$ term allows for differences in intercept values between schools and the $u_{jk}$ allows for further intercept differences between classrooms within schools. Similary, the random slope $w_{jk}$ allows for a different linear relationship between the response and covariate for each classroom-school combination. 
+
+What else can you say that is interesting?
+
+  * Try interpreting the effect of $\text{ActiveTime}$ on the expected response.
+  * Look at the correlation between the $u_{jk}$ and $w_{jk}$ (from the model summary). Does it make sense in light of the plot above? 
+  * We could try including a random slope on $\text{ActiveTime}$ at the school level. This will more than likely give a "boundary (singular) fit" warning, which usually indicates over-fitting. This can happen if there are too few observations to reliably estimate the parameters at a particular level (and note that we only have 3 schools here). In this case, reducing the complexity of the model (by removing the higher level random slope) is recommended.
+
+$~$
+
+End of lab!

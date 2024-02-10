@@ -1,0 +1,156 @@
+---
+title: "Multilevel Modelling"
+subtitle: Lecture 5 (R code)
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+### Preliminaries
+
+This auxiliary notebook reproduces the analyses carried out in the first part of Lecture 5 (excluding the 3-level part). 
+
+We load the R packages *haven*,  *ggplot2*, *lme4*, and *lmerTest*. 
+
+```{r}
+require(haven)      # to load the SPSS .sav file
+require(ggplot2)    # used for production of graphs
+require(lme4)       # used for fitting random effect models
+require(lmerTest)   # required for ranova
+```
+
+We load and prepare the data as previously:
+
+```{r}
+pop.rawdata <- 
+  read_sav(file="https://github.com/MultiLevelAnalysis/Datasets-third-edition-Multilevel-book/blob/master/chapter%202/popularity/SPSS/popular2.sav?raw=true")
+``` 
+
+```{r}
+pop.data <- pop.rawdata[,c("pupil", "class", "extrav", "sex", "texp", "popular")]
+
+colnames(pop.data)<- c("pupil", "class", "extraversion", "gender", "experience", "popularity")
+
+head(pop.data) # we have a look at the first 6 observations
+```
+
+### Models with and without random slope 
+
+```{r}
+model0 <- lmer(formula = popularity ~  1+ extraversion +(1|class), data    = pop.data) 
+```
+
+```{r}
+model1 <- 
+  lmer(
+    formula = popularity ~  1+extraversion +( extraversion|class), data = pop.data) 
+summary(model1)
+```
+
+### Deviance (LR) test
+
+```{r}
+ deviance(model0)    # works but is deprecated
+-2*summary(model0)$logLik
+```
+
+```{r}
+# deviance(model1)
+-2*summary(model1)$logLik
+```
+
+```{r}
+# deviance(model0)-deviance(model1)
+-2*summary(model0)$logLik + 2*summary(model1)$logLik 
+qchisq(0.95,2)
+```
+
+
+```{r}
+ranova(model1)
+-2889.7*2
+-2916.3*2
+```
+
+### More than one predictor variable
+
+```{r}
+model2 <- 
+  lmer(formula = popularity ~ 1 + gender + extraversion + experience + 
+         (1 + gender + extraversion | class), data = pop.data)
+summary(model2)
+```
+
+```{r}
+model3 <- 
+  lmer(formula = popularity ~ 1 + gender + extraversion + experience + 
+         (1 + extraversion | class), data = pop.data)
+
+deviance(model3)-deviance(model2)
+
+qchisq(0.95,3)
+```
+
+### Fitted model summaries
+
+```{r}
+summary(model3)
+names(summary(model3))
+```
+
+```{r}
+summary(model3)$varcor
+```
+
+```{r}
+summary(model3)$vcov
+round(summary(model3)$coef, digits=4)
+round(sqrt(diag(summary(model3)$vcov)), digits=4)
+```
+
+### Fitted models by gender
+
+```{r}
+pop.data$pred3 <- predict(model3)
+gender_names <- c(`0`="Male",`1`="Female") #define labels for facet_grid
+
+ggplot(pop.data,
+       aes(x = extraversion, y = popularity, col = class, group = class)
+       ) +
+       geom_line(aes(y=pred3,group=class, col=class)) +
+       scale_color_gradientn(colours = rainbow(100)) +
+        facet_grid(.~gender, labeller = as_labeller(gender_names))
+```
+
+### Bonus material: Diagnostics
+
+```{r}
+plot(model3)
+```
+
+That’s good --- no pattern at all. The model is correctly specified (in terms of the included predictor variables).
+
+
+```{r}
+qqnorm(resid(model3))
+qqline(resid(model3), col = "red") 
+```
+
+Almost perfectly follows straight line.
+Can conclude that residual distribution is normal, confirming that the assumption of normality of the errors is reasonable.
+
+```{r}
+qqnorm(ranef(model3)$class[,1] )
+qqline(ranef(model3)$class[,1], col = "red")
+```
+
+About ok...
+
+```{r}
+qqnorm(ranef(model3)$class[,2])
+qqline(ranef(model3)$class[,2], col = "red")
+```
+
+Ok.
+
