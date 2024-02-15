@@ -1,0 +1,305 @@
+---
+title: "Multilevel Modelling Practical 5 (Week 6)"
+subtitle:
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+## Instructions - start here!
+
+This lab involves the analysis of a longitudinal data set (full details below). 
+
+Let's begin by loading the necessary packages and data:
+```{r,warning=FALSE,message=FALSE}
+require(lme4)
+require(lmerTest)
+require(ggplot2)
+require(haven)
+```
+
+### Overview
+
+The analysis starts by introducing the longitudinal data and some visual representations. This particular dataset was chosen for three primary reasons: 
+
+* It illustrates the basic notion of "time" in a slightly different context with the hope of a more intuitive understanding. The time variable is age and is continuous (contrary to most cases where it is presented as discrete) to showcase that what defines time is the repeated values within children, rather than a discrete definition and format. 
+
+* It binds well to the notion of covariance. When defined as a random intercept and random slope model, it has a fanning-out form that is distinct enough to produce a positive covariance, allowing for an intuitive explanation both illustratively and quantitatively of what the sign on a covariance implies. 
+
+* There is a non-linear relationship between the response and time, which presents us with an opportunity to showcase how to deal with it. 
+
+The practical continues by comparing the random intercept and full random effects models, again using `ggplot2`. 
+
+It then uses the full random effects model as the primary model to conduct diagnostic checks where non-linearity is discovered in the residuals plot and then countered using a squared age variable.  
+
+It is also shown how one can extract the variance-covariance matrix for inspection and how to use it to build the Intraclass Correlation Coefficient. 
+
+Some basic model assumptions are also tested using visual representations. 
+
+### Multilevel modelling with longitudinal data
+
+The data set is comprised of child weight for children in a British community who were weighed up to four times, roughly between the ages of 6 weeks and 27 months. (It represents a random sample of data previously analyzed by Goldstein (1986) and Prosser, Rasbash, and Goldstein (1991).)
+  
+Download the file childweight.RData from Ultra and place it into your working directory. (Consult Practical 3 if you need further instructions on how to do this.) Then load it into your workspace via
+` 
+$~$
+  
+```{r,  message=FALSE}
+load("childweight.RData") # Insert directory as needed
+data <- childweight
+#Or uncomment the following if there are issues loading the workspace
+#data <- read.csv("https://andygolightly.github.io/teaching/MATH43515/childweight.csv")[,-1]
+
+weight <- data$weight
+age <- data$age
+birthw <- data$brthwt
+girl <- data$girl
+id.f <- as.factor(data$id)
+```
+  
+#### Brief exploratory analysis
+  
+Data summary and inspection:
+```{r}
+head(data)
+summary(data)
+```
+
+Although in most cases of longitudinal analysis you will encounter discrete categorical time values (i.e. 1, 2, 3,...) in this setting, time is not discrete but continuous with differing values between children. This feature however, does not necessarily imply that any additional methodology is needed to handle this.
+  
+$~$
+  
+Let's plot the data by visualising the linear relationship.
+```{r, message=FALSE}
+ggplot(data  = data,
+       aes(x = age,
+           y = weight))+
+  geom_point(size = 1.2,
+             alpha = .8)+
+  geom_smooth(method="lm", 
+              se=FALSE, 
+              col="Red")+
+  labs(title = "Weight vs. Age")
+```
+  
+$~$
+  
+We can also re-plot the relationship, this time inspecting group effects and the potential need for a multilevel model.
+```{r, message=FALSE,echo=FALSE}
+ggplot(data  = data,
+       aes(x = age,
+           y = weight, 
+           col=id.f))+
+  geom_point(size = 1.2, 
+             alpha = .8)+
+  geom_smooth(method="lm",
+              se=FALSE, 
+              col="Red")+
+  theme(legend.position = "none")+
+  labs(title = "Weight vs. Age",
+       subtitle = "By Cluster (id)")
+```
+  
+**TASK:** Identify the number of levels in this data set, and the covariate(s) at each level.  
+
+<details><summary>Click for solution</summary>
+We have two levels (time nested inside individuals). The `age` variable is playing the role of time here. Hence, `weight`, `birthw` and `girl` are all at the individual level (top level of the hierarchy).  
+</details>
+
+  
+#### Random intercept model
+  
+Let's fit a multilevel model with random intercepts and a binary coavriate `girl`. The model takes the form
+
+$$y_{ti} = a+u_i+ b_1 T_{ti}+b_2\text{girl}_{i} +\epsilon_{ti}$$
+
+We fit the model via:
+```{r}
+lmodel <- lmer(weight ~ age  + girl + (1 | id), data=data)
+summary(lmodel)
+```
+  
+$~$
+  
+Now extract and visualize the fitted values vs. the linear model:
+
+```{r, message=FALSE}
+data$pred1 <- predict(lmodel)
+
+lmodel_int <- ggplot(data, aes(age,weight)) +
+  geom_line(aes(y=pred1,group=id.f, col=id.f)) +
+  geom_point(aes(age,weight,col=id.f)) + 
+  geom_smooth(method="lm",
+              se=FALSE, 
+              col="Red") +
+   ggtitle("Multilevel Model", 
+           subtitle="Random Intercept-only") +
+  xlab("Age (Time)") + 
+  ylab("Weight") +
+  theme(legend.position = "none")
+lmodel_int
+```
+  
+#### Adding a random slope for time
+
+A multilevel model with both random intercepts and a random slope for time can be fitted thus:
+```{r}
+lmodel2 <- lmer(weight ~ age + girl + (1 + age | id), data=data)
+summary(lmodel2)
+```
+  
+$~$
+  
+We visualize the fitted values:
+```{r, message=FALSE}
+data$pred2 <- predict(lmodel2)
+
+lmodel_int_sl <- ggplot(data,aes(age,weight)) +
+  geom_line(aes(y=pred2,group=id.f, col=id.f)) +
+  geom_point(aes(age,weight, col=id.f)) + 
+  geom_smooth(method="lm", 
+              se=FALSE, 
+              col="Red")+
+  ggtitle("Multilevel model (lmodel2)", 
+          subtitle="Random Intercept and Slope") +
+  xlab("Age (Time)") + 
+  ylab("Weight")+
+  theme(legend.position = "none")
+lmodel_int_sl
+```
+   
+$~$
+  
+Let's extract and inspect the variance-covariance matrix. 
+```{r}
+Var_Cov_matrix <- as.data.frame(VarCorr(lmodel2))
+Var_Cov_matrix
+```
+
+The positive covariance re-affirms the fanning out pattern observed. The higher the predicted weight at baseline time (that is, higher child intercept), the higher the weight will be as time passes (i.e. a steeper child time slope). 
+
+$~$
+  
+Let's look at a visual comparison between the random intercept vs random intercept and slope model. Make sure you understand the following code:
+
+```{r, message=FALSE}
+vars <- c("id","age","weight")
+
+data_pred1 <- cbind(data[,vars],data[,"pred1"],group=1)
+names(data_pred1)[4] <- "pred"
+data_pred2 <- cbind(data[,vars],data[,"pred2"],group=2)
+names(data_pred2)[4] <- "pred"
+data_comp <- rbind(data_pred1,data_pred2)
+
+model_names <- c("1"="Random Intercept-only","2"="Random Intercept and Slope")
+
+ggplot(data_comp, aes(age,weight)) +
+  geom_line(aes(y=pred,group=as.factor(id),
+                col=as.factor(id))) +
+  geom_point(aes(age,weight, 
+                 col=as.factor(id))) + 
+  geom_smooth(method="lm", 
+              se=FALSE, 
+              col="Red")+
+  facet_wrap(~group, 
+             labeller = as_labeller(model_names)) +
+  ggtitle("Multilevel Model Comparison") +
+  xlab("Age (Time)") + 
+  ylab("Weight") +
+  theme(legend.position = "none")
+```
+
+**TASK:** Is the random slope on time needed? Perform an appropriate test.
+
+<details><summary>Click for solution</summary>
+```{r}
+ranova(lmodel2)
+```
+There is strong) evidence to reject the null hypothesis that the slope variance is zero. We need the random slopes!
+</details>
+
+$~$
+
+#### Dealing with the nonlinear relationship
+
+Given that the more complex model `lmodel2` captures non-zero variance in random intercept and slope parameters, we will continue with it as our main model. 
+
+Are the model assumptions valid? We will begin by inspecting the residuals. 
+```{r}
+plot(lmodel2)
+```
+
+It is evident that the plot suggests an underlying non-linear structure.  
+  
+$~$
+  
+In order to correct the non-linearity observed, we perform multilevel modelling again, this time including a non-linear term for age.
+```{r}
+lmodel3 <- lmer(weight ~ age + c(age*age) + girl  + (1 + age | id), data=data)
+
+summary(lmodel3)
+```
+
+$~$
+  
+We again inspect the residuals vs fitted values. 
+```{r}
+plot(lmodel3)
+```
+
+It is evident that the non-linearity has been controlled for and residuals look much more acceptable.  
+  
+$~$
+  
+We continue with inspection of model assumptions. i.e. normally distributed residuals and random effects. 
+```{r}
+qqnorm(resid(lmodel3))
+qqline(resid(lmodel3), 
+       col = "red")
+
+qqnorm(ranef(lmodel3)$id[,1])
+qqline(ranef(lmodel3)$id[,1], 
+       col = "red")
+```
+
+The QQ Plots also look fairly acceptable (close to y=x line).
+
+**TASK:** Visualise the fit of `lmodel3`, with separate plots for girls vs boys. Hint: first use `predict(lmodel3)` to create a new column in `data`. 
+
+<details><summary>Click for solution</summary>
+```{r}
+data$pred3 <- predict(lmodel3)
+
+lmodel_int_s2 <- ggplot(data,aes(age,weight)) +
+  geom_line(aes(y=pred3,group=id.f, col=id.f)) +
+  geom_point(aes(age,weight,col=id.f)) + 
+  geom_smooth(method="lm", 
+              se=FALSE, 
+              col="Red")+
+  facet_wrap(~girl, 
+             labeller = as_labeller(c("0"="Boy","1"="Girl")))+
+  ggtitle("Multilevel model (lmodel3)", 
+          subtitle="Random Intercept and Slope, nonlinear age") +
+  xlab("Age (Time)") + 
+  ylab("Weight")+
+  theme(legend.position = "none")
+lmodel_int_s2
+```
+</details>
+
+$~$ 
+
+**Harder:** We have not yet included the birth weight `birthw` variable in the model. How should we interpret the inclusion of `birthw` as a fixed effect? What would you expect to happen when you include it? Confirm (or deny) your intuition!
+
+<details><summary>Click for solution</summary>
+`birthw` is an individual level covariate. Hence, it's inclusion as a fixed effect may help to explain some of the variability in the random intercept terms. I'd expect that adding it in will result in a reduction in the random intercept variance and (probably) an insignificant overall intercept term (since for each individiual, `birthw` and the random intercept will effectively capture most of the baseline variation.) 
+</details>
+
+$~$
+
+End of lab!
+
+
+
+

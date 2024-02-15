@@ -10,59 +10,40 @@ fontsize: 12pt
 
 ## Instructions -- start here!
 
-The first part of this notebook (**Exercise 1**) reproduces the images displayed through the use of `ggplot` in Lecture 3 of this module. The code in this example is influenced by <https://www.rensvandeschoot.com/tutorials/lme4/>.
+The first part of this notebook (**Exercise 1**) reproduces the images displayed through the use of `ggplot` in Lecture 3 of this module. The code in this example is influenced by  https://www.rensvandeschoot.com/tutorials/lme4/.
 
-The second part of the notebook (**Exercise 2**) allows you to test your `ggplot2` skills. If time permits, you may apply ggplot2 more freely onto another data set (**Exercise 3**).
+The second part of the notebook (**Exercise 2**) allows you to test your `ggplot2` skills. If time permits, you may apply ggplot2 more freely onto another data set (**Exercise 3**). 
 
-We initially load two useful R packages (*haven*, *ggplot2*).
-
-```{r}
-# ---------------------------------------------------------------------
-# clear the environment var area
-rm(list = ls())
-# clear all plots
-graphics.off()
-# clear the console area
-cat("\014")
-# ---------------------------------------------------------------------
-```
+We initially load two useful R packages (*haven*,  *ggplot2*). 
 
 ```{r,message=FALSE,warning=FALSE}
 #You may need to install these packages!
 require(haven)      # to load the SPSS .sav file
 require(ggplot2)    # used for production of graphs
 ```
-
 If you don't have the above packages, you will need to use the usual `install.packages()` and `library()` for both.
 
 ## Exercises 1
 
 ### Acquire and prepare data
 
-Use the code below to reproduce the images from the lecture. Please do not just click your way through: try to understand and appreciate what the code does in all instances, and try to execute minor modifications of the code to observe the effect.
+Use the code below to reproduce the images from the lecture.  Please do not just click your way through: try to understand and appreciate what the code does in all instances, and try to execute minor modifications of the code to observe the effect.  
 
 The following command is reading the data in directly from Andy's Github page.
 
 ```{r}
-pop.rawdata <-
-  read_sav(file = "https://andygolightly.github.io/teaching/MATH43515/popular2.sav")
-```
+pop.rawdata <- 
+   read_sav(file="https://andygolightly.github.io/teaching/MATH43515/popular2.sav")
+``` 
 
 $~$
 
 We extract the relevant columns, relabel accordingly, and display the first six rows.
 
 ```{r}
-pop.data <-
-  pop.rawdata[, c("pupil", "class", "extrav", "sex", "texp", "popular")]
+pop.data <- pop.rawdata[,c("pupil", "class", "extrav", "sex", "texp", "popular")]
 
-colnames(pop.data) <-
-  c("pupil",
-    "class",
-    "extraversion",
-    "gender",
-    "experience",
-    "popularity")
+colnames(pop.data)<- c("pupil", "class", "extraversion", "gender", "experience", "popularity")
 
 head(pop.data) # we have a look at the first 6 observations
 ```
@@ -86,16 +67,13 @@ colnames(Tex) <- c("experience", "frequency")
 Produce a histogram of the response variable.
 
 ```{r}
-ggplot(data = pop.data, aes(popularity)) +
-  geom_histogram(bins = 15)
+ggplot(data=pop.data, aes(popularity)) + 
+  geom_histogram(bins=15)
 ```
 
 **TASK**: Try `col="black", fill="light blue"` inside `geom_histogram()`.
 
-```{r}
-ggplot(data = pop.data, aes(popularity)) +
-  geom_histogram(bins = 15, col="black", fill="light blue")
-```
+$~$
 
 Visualise the explanatory variables as follows.
 
@@ -110,71 +88,69 @@ ggplot(data=Tex, aes(x=experience, y=frequency)) +
 
 **TASK**: What does `stat="identity"` do? Check the help file via `?geom_bar`.
 
-> **stat="identity"**: The `stat` parameter within `geom_bar` specifies the statistical transformation to use on the data for this layer. By default, `geom_bar` uses `stat="count"`, which makes the height of the bar proportional to the number of cases in each category (or group). When you use `stat="identity"`, you're telling `ggplot2` to use the actual values in your data for the heights of the bars. This is commonly used when you already have summarized data, where each row of your data frame represents counts, or some other value that you want to display directly.
+$~$
 
 Scatterplot of popularity against extraversion and Pearson correlation:
 
 ```{r}
 ggplot(data = pop.data, aes(x = extraversion, y = popularity)) +
-  geom_point(size = 1.2, alpha = .8)
+       geom_point(size = 1.2,alpha = .8)
 
 cor(pop.data$extraversion, pop.data$popularity)
 ```
 
 **TASK**: What does `size` and `alpha` do in `geom_point()`?
 
-> Size determines the size of the points in the scatter plot. Alpha controls the transparency of the points on the scatter plot.
+$~$
 
-Scatterplot of popularity against gender and Pearson correlation:
-
+Scatterplot of popularity against gender and Pearson correlation: 
+ 
 ```{r,message=FALSE}
-ggplot(data  = pop.data, aes(x = gender, y = popularity, group = gender)) +
+ggplot(data  = pop.data, aes(x = gender, y = popularity, group=gender)) +
   geom_boxplot()
 
 cor(pop.data$gender, pop.data$popularity)
 ```
 
 ```{r}
-ggplot(data = pop.data,
-       aes(
-         x   = extraversion,
-         y = popularity,
-         colour = as.factor(gender)
-       )) +
-  geom_point(size = 1,
-             alpha = .7,
-             position = "jitter")
+ggplot(data = pop.data, 
+       aes(x   = extraversion, y = popularity, colour = as.factor(gender))
+       ) +  
+geom_point(size = 1, alpha = .7, position = "jitter")
 ```
 
 Let's calculate the mean popularity and mean teacher experience score within each class and store in a data frame. Although no actual averaging takes place when calculating the teacher experience means, the code is useful for the extraction of the class level variable.
 
 ```{r}
-pop.means <- tapply(pop.data$popularity, pop.data$class, mean)
-# average popularity per class
+pop.means <- tapply(pop.data$popularity, pop.data$class, mean) 
+    # average popularity per class
 exp.means <- tapply(pop.data$experience, pop.data$class, mean)
-# extracting the upper-level variable teaching experience
-# (no actual averaging takes place here, as experience is constant within classes)
-class.level <- data.frame(pop.means = pop.means, exp.means = exp.means)
+    # extracting the upper-level variable teaching experience
+    # (no actual averaging takes place here, as experience is constant within classes)
+class.level<- data.frame(pop.means=pop.means, exp.means=exp.means)
 
 # Plot mean popularity per class against teacher experience
-ggplot(data = class.level, aes(x = exp.means, y = pop.means)) +
-  geom_point(size = 2) +
-  labs(y = "mean popularity per class") +
-  labs(x = "teacher experience")
+ggplot(data = class.level, aes(x=exp.means, y= pop.means)) +
+   geom_point(size=2) + 
+   labs(y="mean popularity per class") + 
+   labs(x="teacher experience")
 ```
 
 **Task**: make clear to yourself the use of `tapply()` here.
 
 $~$
 
+
 ### Naive simple linear regression models
 
-Let's fit a single regression model to all data. The model takes the form $$
+Let's fit a single regression model to all data. The model takes the form
+\[
 y_{ij}=a + b x_{ij}+ \epsilon_{ij}, \quad \epsilon_{ij}\sim N(0,\sigma^2), \quad i=1,\ldots,n_j,\quad j=1,\ldots,100.
-$$ We fit the model and extract estimates of $a$ and $b$ as follows.
+\]
+We fit the model and extract estimates of $a$ and $b$ as follows.
 
 ```{r}
-simple.linear.model <- lm(popularity ~ extraversion, data = pop.data)
+simple.linear.model<- lm(popularity ~ extraversion, data=pop.data)
 summary(simple.linear.model)$coef
 a <- simple.linear.model$coef[1]
 b <- simple.linear.model$coef[2]
@@ -184,58 +160,39 @@ Plot the data and overlay the fitted regression line:
 
 ```{r,warning=FALSE}
 ggplot(data  = pop.data, aes(x = extraversion, y = popularity)) +
-  geom_point(size = 0.7) +
-  geom_smooth(
-    method = lm,
-    # to add regression line
-    se = TRUE,
-    col = "red",
-    size = 1,
-    alpha = .8
-  )
-```
+    geom_point(size=0.7)+ 
+    geom_smooth(method = lm, # to add regression line
+                se = TRUE, col = "red", size = 1, alpha = .8)
+``` 
 
 Let's produce a scatterplot with jitter, colour by class:
 
 ```{r}
-ggplot(data  = pop.data, aes(x = extraversion, y = popularity, col = class)) +
-  geom_jitter(size = 0.8) +  # to add some random noise for plotting purposes
-  scale_color_gradientn(colours = rainbow(100)) # +
+ggplot(data  = pop.data, aes(x = extraversion, y = popularity, col=class)) +
+  geom_jitter(size=0.8) +  # to add some random noise for plotting purposes
+  scale_color_gradientn(colours = rainbow(100)) #+
 ```
 
-Does one line fit all? We now fit a separate model for each class. The models take the form (for each class $j$) $$
+Does one line fit all? We now fit a separate model for each class. The models take the form (for each class $j$)
+\[
 y_{ij}=a_j+b_j x_{ij}+\epsilon_{ij}, \quad \epsilon_{ij}\sim N(0,\sigma^2_j).
-$$
+\]
 
 ```{r,message=FALSE}
-ggplot(data = pop.data,
-       aes(
-         x = extraversion,
-         y = popularity,
-         colour = class,
-         group = class
-       )) +
-  geom_jitter(size = 0.8) +
-  geom_smooth(
-    method = lm,
-    se = FALSE,
-    size = .5,
-    alpha  = .8
-  ) +
-  scale_color_gradientn(colours = rainbow(100))
+ggplot(data = pop.data, 
+       aes(x = extraversion,y = popularity, colour = class, group = class)
+       ) + 
+     geom_jitter(size=0.8) +
+     geom_smooth(method = lm, se = FALSE, size = .5, alpha  = .8) + 
+     scale_color_gradientn(colours = rainbow(100))
 ```
 
 We can extract the estimates of $a_j$ and $b_j$ via a `for` loop:
 
 ```{r}
-fit.all <-
-  matrix(NA, 100, 2) #one row for each class, cols are a and b
-for (j in 1:100) {
-  #loop over classes
-  fit.all[j, ] <-
-    lm(popularity ~ extraversion,
-       data = pop.data,
-       subset = pop.data$class == j)$coef
+fit.all <- matrix(NA, 100,2) #one row for each class, cols are a and b
+for (j in 1:100){  #loop over classes
+  fit.all[j,]<-lm(popularity~extraversion, data=pop.data, subset=pop.data$class==j)$coef
 }
 colnames(fit.all) <- c("intercept", "slope")
 fit.all <- as.data.frame(fit.all)
@@ -251,7 +208,7 @@ ggplot(data=fit.all, aes(slope)) +
   geom_histogram(bins=15) + geom_vline(xintercept=b, linetype="dashed", color = "red")
 ```
 
-**TASK** (harder): suppose that we model the intercepts via $a_j = a +u_{j}$ where $u_j\sim N(0,\sigma^2_u)$ independently of all other random variables. Write down the resulting model in the form $y_{ij}= \ldots$. Is this likely to be a sensible model? What exploratory techniques can we use to answer his question? Discuss with colleagues and/or Andy.
+**TASK** (harder): suppose that we model the intercepts via $a_j = a +u_{j}$  where $u_j\sim N(0,\sigma^2_u)$ independently of all other random variables. Write down the resulting model in the form $y_{ij}= \ldots$. Is this likely to be a sensible model? What exploratory techniques can we use to answer his question? Discuss with colleagues and/or Andy.
 
 For two pupils in the same class, what is the covariance between response values? What is the covariance between the response values of two pupils from different classes? How might we model the $b_j$?
 
@@ -259,7 +216,7 @@ For two pupils in the same class, what is the covariance between response values
 
 $~$
 
-## Exercise 2
+## Exercise 2 
 
 Load the `mpg` data in the `ggplot2` package to obtain a data set on fuel efficiency.
 
@@ -267,30 +224,23 @@ Load the `mpg` data in the `ggplot2` package to obtain a data set on fuel effici
 data("mpg", package = "ggplot2")
 ```
 
-Look at the help file to see the variables available (note: `?ggplot2::mpg`). You’ll need to map the plots requested below to the correct variable from the documentation.
+Look at the help file to see the variables available (note: `?ggplot2::mpg`).  You’ll need to map the plots requested below to the correct variable from the documentation.
 
-1.  Produce a scatter plot of the fuel efficiency on a highway (motorway, variable name `hwy`) against the engine’s size (aka displacement `displ`).
+1. Produce a scatter plot of the fuel efficiency on a highway (motorway, variable name  `hwy`) against the engine’s size (aka displacement `displ`).
 
-<details>
-
-<summary>Click for solution</summary>
-
+<details><summary>Click for solution</summary>
 ```{r}
 # 1.
 ggplot(mpg, aes(x = displ, y = hwy)) +
   geom_point()
 ```
-
 </details>
 
 <br>
 
--   There are a few vehicles with large engines that have unusually high fuel efficiency for such big engines. Colour the points by the type of car (the `class` variable). Can you explain these cars?
+   - There are a few vehicles with large engines that have unusually high fuel efficiency for such big engines. Colour the points by the type of car (the `class` variable). Can you explain these cars?
 
-<details>
-
-<summary>Click for solution</summary>
-
+<details><summary>Click for solution</summary>
 ```{r}
 # sub part 1
 ggplot(mpg, aes(x = displ, y = hwy)) +
@@ -298,34 +248,26 @@ ggplot(mpg, aes(x = displ, y = hwy)) +
 ```
 
 Notice that 5 of the 6 points have a large engine and higher than expected efficiency are 2-seater cars, so these are most likely sports cars which are lighter and despite having large engines use slightly less fuel.
-
 </details>
 
-<br>
-
--   Now remove the colouring but split the plot into facets where you have a graphic per car type. (Use `facet_wrap()` with `class`.)
-
-<details>
-
-<summary>Click for solution</summary>
-
+<br>   
+   
+   - Now remove the colouring but split the plot into facets where you have a graphic per car type. (Use `facet_wrap()` with `class`.)
+   
+<details><summary>Click for solution</summary>
 ```{r}
 # sub part 2
 ggplot(mpg, aes(x = displ, y = hwy)) +
   facet_wrap(~ class) +
   geom_point()
 ```
-
 </details>
 
-<br>
+<br>      
+   
+   - Add to this collection of plots the fuel efficiency for city driving, coloured in red. Update the y-axis to be called “Fuel efficiency” to reflect that it is not only the hwy variable plotted now.
 
--   Add to this collection of plots the fuel efficiency for city driving, coloured in red. Update the y-axis to be called “Fuel efficiency” to reflect that it is not only the hwy variable plotted now.
-
-<details>
-
-<summary>Click for solution</summary>
-
+<details><summary>Click for solution</summary>
 ```{r}
 # sub part 3
 ggplot(mpg, aes(x = displ, y = hwy)) +
@@ -335,18 +277,15 @@ ggplot(mpg, aes(x = displ, y = hwy)) +
   ylab("Fuel efficiency")
 ```
 
-Note that we're overriding the `y` mapping with the `cty` variable, and putting the colour argument *outside* the aesthetic because it applies to all these points and is not data dependent.
-
+Note that we're overriding the `y` mapping with the `cty` 
+variable, and putting the colour argument *outside* the aesthetic because it applies to all these points and is not data dependent.
 </details>
 
-<br>
+<br>     
 
-2.  Write the code to produce a scatterplot of highway fuel efficiency `hwy` against displacement `displ` coloured by drive type `drv` (front, rear, four). Overlay fitted regression lines coloured by drive type. Finally, overlay a single regression line, coloured black, based on all data.
+2. Write the code to produce a scatterplot of highway fuel efficiency `hwy`  against displacement `displ` coloured by drive type `drv` (front, rear, four). Overlay fitted regression lines coloured by drive type. Finally, overlay a single regression line, coloured black, based on all data.
 
-<details>
-
-<summary>Click for solution</summary>
-
+<details><summary>Click for solution</summary>
 ```{r, warning=FALSE, message=FALSE}
 # 2. 
 ggplot(mpg, aes(x = displ, y = hwy)) +
@@ -358,33 +297,25 @@ ggplot(mpg, aes(x = displ, y = hwy)) +
 When producing this plot we need to remember the rules `ggplot2` uses. We can’t put the colour in the `ggplot()` plot creation call, because then it will apply to all geoms (and we need the black smoother not to be split by drive train).
 
 Therefore, we put just `x` and `y` in the `ggplot()` call, add the points with the additional colour aesthetic, add a regression fit with the colour in an aesthetic so that we get a regression line per drive type, then add the black regression line with the colour not specified as an aesthetic because it applies to all the data (instead, just a direct argument).
-
 </details>
 
-<br>
+<br> 
 
-3.  Produce a bar plot of the count of the number of each type of vehicle (`class`) in the data by using the Geom `geom_bar()`, with aesthetic `x` set to the vehicle type (NB: this question is to help you check if you are starting to understand the plotting system, because even though we didn’t show an example of a bar plot, this sentence alone should be enough information without needing to look at the documentation. The plotting system follows a coherent set of rules for all plot types!)
+3. Produce a bar plot of the count of the number of each type of vehicle (`class`) in the data by using the Geom `geom_bar()`, with aesthetic `x` set to the vehicle type (NB: this question is to help you check if you are starting to understand the plotting system, because even though we didn’t show an example of a bar plot, this sentence alone should be enough information without needing to look at the documentation. The plotting system follows a coherent set of rules for all plot types!)
 
-<details>
-
-<summary>Click for solution</summary>
-
+<details><summary>Click for solution</summary>
 ```{r}
 # 3.
 ggplot(mpg, aes(x = class)) +
   geom_bar()
 ```
-
 </details>
 
-<br>
+<br> 
 
--   Make a second version where you also add an aesthetic `fill` which is set to the variable `drv`. What is this showing?
-
-<details>
-
-<summary>Click for solution</summary>
-
+   - Make a second version where you also add an aesthetic `fill` which is set to the variable `drv`. What is this showing?
+   
+<details><summary>Click for solution</summary>
 ```{r}
 # 3. sub part
 ggplot(mpg, aes(x = class, fill = drv)) +
@@ -392,21 +323,20 @@ ggplot(mpg, aes(x = class, fill = drv)) +
 ```
 
 Each bar is still the same height as in the first bar plot, but now it is broken down to show how many of each type of car is 4-wheel, front wheel and rear wheel drive.
-
 </details>
 
-<br>
+<br> 
 
 $~$
+
 
 ## Exercise 3 (if time)
 
 The data used here represent Maths achievement scores of a subsample of subjects from the 1982 High School and Beyond Survey. The full dataset can be found within the package [merTools](https://rdrr.io/cran/merTools/man/hsb.html). Click the link to read about the data set.
 
-The analysis starts by introducing the data and producing some visual representations.
+The analysis starts by introducing the data and producing some visual representations. 
 
 Read in the data from Andy's Github page with
-
 ```{r}
 sub_hsb <- 
    read.csv(file="https://andygolightly.github.io/teaching/MATH43515/sub_hsb.csv")
@@ -421,13 +351,13 @@ ses <- data$ses
 female <- data$female
 school.f <- as.factor(data$schid)
 ```
-
+  
 Data inspection:
 
 ```{r}
 head(data)
 ```
-
+  
 Start with a linear regression as a baseline model.
 
 ```{r}
@@ -446,14 +376,16 @@ ggplot(data  = data, aes(x = ses, y = mathach))+
   xlab("Ses") + 
   ylab("Mathach")
 ```
-
+  
+  
 Carry out further exploratory analysis of the data along the lines of the previous example.
 
 ```{r}
 # ...
 
 ```
-
+  
 <br>
+  
+End of lab!  
 
-End of lab!
