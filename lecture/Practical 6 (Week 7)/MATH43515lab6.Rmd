@@ -1,0 +1,323 @@
+---
+title: "Multilevel Modelling Practical 6 (Week 7)"
+subtitle: null
+output:
+  pdf_document: default
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+## Instructions - start here!
+
+**Exercise 1** considers long and wide data shapes, illustrated by the Oxford boys data set. **Exercise 2** involves a simulation exercise (simulating from a two-level longitudinal model). You may also use this lab to work on the formative assignment.
+
+Let's begin by loading the necessary packages and data:
+
+```{r,warning=FALSE,message=FALSE}
+require(lme4)
+require(lmerTest)
+require(ggplot2)
+```
+
+## Exercise 1 (Long and wide data shape)
+
+Let's return to the Oxboys data, discussed in the lecture, which is a built-in R data set:
+
+```{r,warning=FALSE,message=FALSE}
+require(nlme)
+data(Oxboys)
+```
+
+This data set was by default given in **long** format. But assume we wanted this data in **wide** format, for instance in order to carry out a multivariate analysis.
+
+Let's have a brief look at the data frame:
+
+```{r}
+head(Oxboys)
+dim(Oxboys)
+```
+
+We see that there are two variables capturing the "time" component:
+
+-   the `age` variable
+-   the `Occasion` variable
+
+There is a one-to-one relationship between these two variables, so for the purpose of creating a "wide" data frame, we can choose any of these. In this case, we have decided to drop `age`:
+
+```{r}
+Oxboys.wide <- reshape(Oxboys, direction="wide", idvar="Subject", timevar="Occasion", drop="age")
+```
+
+```{r}
+head(Oxboys.wide)
+```
+
+We can produce pairwise scatterplots of the data, which gives a sense of the correlation between heights measured at different times:
+
+```{r}
+plot(Oxboys.wide[,-1], col=Oxboys.wide$Subject)
+```
+
+Let's re-transform the data back into a long data format:
+
+```{r}
+Oxboys.long<- reshape(Oxboys.wide, direction="long", 
+        idvar="Subject", varying=list(2:10),v.names="height" )
+head(Oxboys.long)
+```
+
+**TASK:** Convince yourself that the `Oxboys.long` data frame is equivalent to the original `Oxboys` frame. Check also the help file for `reshape` and make sure you're happy with the syntax.
+
+### Regression vs multilevel analysis
+
+By ignoring group structure, we can fit a regression model of the form
+
+$$y_{ti}=a+b T_{ti}+\epsilon_{ti}$$
+
+```{r}
+model.lm <- lm(height ~ age, data=Oxboys)
+```
+
+Let's also obtain prediction intervals for each response value:
+
+```{r,warning=FALSE}
+lmpred <- data.frame(predict(model.lm,interval="prediction"))
+lmpred$age <- Oxboys$age
+lmpred$height <- Oxboys$height
+lmpred$Subject <- Oxboys$Subject
+head(lmpred)
+```
+
+We see the fitted value $\hat{y}_{ti} = \hat{a} +\hat{b} T_{ti}$, lower and upper limits of a 95% prediction interval, age, height and the subject label. Let's plot the prediction interval for subject 2:
+
+```{r}
+lmpredS2 <- lmpred[lmpred$Subject==2,]
+ggplot(lmpredS2,aes(age,height))+
+  geom_point()+
+  geom_line(aes(y=fit))+
+  geom_line(aes(y=lwr))+
+  geom_line(aes(y=upr))
+```
+
+This doesn't look terrible, although the fit tracks somewhat above the actual data.
+
+**TASK:** Try generating the above plots for different subjects (in particular, try subjects 1 and 10). Does the prediction interval change? If not, why not?
+
+<details>
+
+<summary>Click for solution</summary>
+
+The prediction interval does not change. The model ignores group structure and can only explain one source of variation (within individuals) but not the variation between individuals. Consequently, the prediction intervals use the estimated error variance based on the entire data set, irrespective of which individual (subject) we're looking at. We can see this by plotting the full data set and overlaying the prediction interval:
+
+```{r}
+ggplot(lmpred,aes(age,height))+
+  geom_line(aes(y=fit))+
+  geom_line(aes(y=lwr))+
+  geom_line(aes(y=upr))+
+  geom_point(aes(col=Subject),show.legend=FALSE)
+```
+
+</details>
+
+$~$
+
+Now, let's fit a random intercept model of the form
+
+$$y_{ti}=a+u_i + bT_{ti} + \epsilon_{ti}$$ where the random intercept terms are $u_i \sim N(0,\sigma^2_u)$. We use the following code to fit the model:
+
+```{r}
+model.lmer <- lmer(height ~ 1+age+(1|Subject),data=Oxboys)
+```
+
+To obtain prediction intervals based on the `lmer` output, we need the following package:
+
+```{r,message=FALSE,warning=FALSE}
+require(merTools)
+```
+
+Now obtain prediction intervals for each response value and append to the `lmpred` data frame to give a new data frame `pred`:
+
+```{r,warning=FALSE}
+lmerpred <- data.frame(predictInterval(model.lmer))
+names(lmerpred) <- c("fit2","lwr2","upr2")
+pred <- cbind(lmerpred,lmpred)
+head(pred)
+```
+
+Finally, we can overlay prediction intervals for subject 2:
+
+```{r}
+predS2 <- pred[pred$Subject==2,]
+ggplot(predS2,aes(age,height))+
+  geom_point()+
+  geom_line(aes(y=fit))+
+  geom_line(aes(y=lwr))+
+  geom_line(aes(y=upr))+
+  geom_line(aes(y=fit2),col="red")+
+  geom_line(aes(y=lwr2),col="red")+
+  geom_line(aes(y=upr2),col="red")
+```
+
+The prediction interval based on the random intercept model is much tighter (since the within subjects variation is considerably lower than for the simple linear regression model which ignores group structure).
+
+To see this, consider first the summary of the linear regression model:
+
+```{r}
+summary(model.lm)
+```
+
+The square of the residual standard error gives an estimate of the residual error variance $\sigma^2$.
+
+Now consider the summary of the random intercept model:
+
+```{r}
+summary(model.lmer)
+```
+
+Look at the random effect variance estimate $\sigma^2_u$ versus the estimate of residual variance $\sigma^2$. Most of the variation is between subjects! Hence, after accounting for group structure, the within subjects variation is relatively small.
+
+$~$
+
+## Exercise 2 (simulation from the two-level longitudinal model)
+
+Suppose that we want to set up and simulate from a hypothetical model of MATH43515 student stress levels (for 30 students) over a 6 week period with the following variables:
+
+-   `stress` - response variable on [0,100] with 100 representing max stress.
+-   `week` - time covariate taking values 1 to 6.
+-   `ML` - a binary (upper level) covariate taking the value 1 if a student has taken the Machine Learning module and 0 otherwise.
+-   `ID` - a unique student identifier.
+
+Imagine that the model we want to simulate from takes the form
+
+$$y_{ti}=a + u_i + b T_{ti} + v_i T_{ti} + c z_i + \epsilon_{ti}, \quad i=1,\ldots,30, \quad t=1,\ldots,6$$ where $T_{ti}=t-1$ represents week number, $z_i$ represents the binary `ML` variable, $u_i \sim N(0,\sigma^2_u)$, $v_i \sim N(0,\sigma^2_v)$ and $\epsilon_{ti}\sim N(0,\sigma^2)$.
+
+Let's set up a data frame within which to store the simulated data:
+
+```{r}
+set.seed(43515)
+ID <- rep(seq(1,30),6)
+ML <- rep(sample(0:1,30,replace=TRUE),6)
+week <- rep(seq(0,5),each=30)
+stress <- rep(0,180) #overwrite this later
+data <- data.frame(ID,stress,week,ML) 
+```
+
+We will need to pick some parameter values. How about:
+
+```{r}
+a <- 40 #baseline stress level
+b <- 5 #stress increases 5 units with every week
+c <- 5 #if you're taking ML, expected stress increases by 5 units!
+sigu <- 1 # Random intercept standard deviation
+sigv <- 1 # Random slope standard deviation
+sig <- 1 #error standard deviation
+```
+
+Now simulate from the model. We will do this by looping over time inside a loop over individuals:
+
+```{r}
+set.seed(43515) #for reproducibility
+#Simulate individual random effects
+ui <- rnorm(30,0,sigu)
+vi <- rnorm(30,0,sigv) 
+for(t in 1:6)
+{ 
+ for(i in 1:30)
+ {
+  #simulate response at each time within individuals
+  data$stress[(t-1)*30+i] <-  
+    a+ui[i]+(b+vi[i])*(t-1)+c*data$ML[(t-1)*30+i]+rnorm(1,0,sig)
+  }
+}
+head(data)
+```
+
+Notice how the random effects only change from individual to individual. Let's visualise the data we've generated:
+
+```{r}
+ggplot(data,aes(x=week,y=stress,group=ID,col=ID))+
+  geom_line()+
+  facet_wrap(~ML)
+```
+
+Fit the model from which the data were simulated and check that the parameter estimates are consistent with the ground truth:
+
+```{r}
+model.synth <- lmer(stress ~ 1+week+ML+(1+week|ID),data=data)
+summary(model.synth)
+```
+
+All looks well - the fixed effect estimates and random effect variances are consistent with the ground truth values that generated the data. There are various ways in which you could perform further analysis and check against what you expect to see e.g.
+
+-   Check to see that the interaction between `ML` and `week` is insignificant.
+
+<details>
+
+<summary>Click for solution</summary>
+
+Add in the cross level interaction as follows:
+
+```{r}
+model.synth2 <- lmer(stress ~ 1+week+ML+week:ML+(1+week|ID),data=data)
+summary(model.synth2)
+```
+
+The p-value is well above the 5% threshold indicating insufficient evidence to reject the null hypothesis that the fixed effect for the cross level intereaction is zero. We therefore conclude that this term is not needed.
+
+</details>
+
+$~$
+
+-   Check that the random time slope is needed (we know it is!)
+
+<details>
+
+<summary>Click for solution</summary>
+
+Perform a likelihood ratio test of the null hypothesis $H_0: \sigma_v=0$ as follows:
+
+```{r}
+ranova(model.synth)
+```
+
+We see a very small p-value suggesting strong evidence against the null hypothesis. We conlude that the random slope on `week` is needed.
+
+</details>
+
+$~$
+
+-   Check the residual diagnostics.
+
+<details>
+
+<summary>Click for solution</summary>
+
+Check residuals versus fitted values and normality of residuals and random effects:
+
+```{r}
+plot(model.synth)
+qqnorm(resid(model.synth))
+qqline(resid(model.synth), 
+       col = "red")
+qqnorm(ranef(model.synth)$ID[,1])
+qqline(ranef(model.synth)$ID[,1], 
+       col = "red")
+qqnorm(ranef(model.synth)$ID[,2])
+qqline(ranef(model.synth)$ID[,2], 
+       col = "red")
+```
+
+Unsurprisingly (given how the data were generated), the model assumptions look reasonable.
+
+</details>
+
+$~$
+
+You could also consider adding in an additional covariate at the lower level!
+
+If you've got this far and have time to spare, feel free to work on the formative assignment.
+
+$~$
+
+## End of lab!
