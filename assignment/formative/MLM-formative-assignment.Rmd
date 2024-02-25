@@ -1,7 +1,7 @@
 ---
-title: "Title of your report"
-author: "Leave author name blank"
-date: "Your submission date"
+title: "Multilevel Modelling Formative"
+author: "Zehao Qian"
+date: "`r Sys.Date()`"
 output:
   pdf_document: default
   html_document: default
@@ -107,9 +107,9 @@ Remove this section from your final report.
 ## Word count
 
 ```{r}
-#install.packages("devtools")
-#devtools::install_github("benmarwick/wordcountaddin", type = "source", dependencies = TRUE)
-require(wordcountaddin)
-word_count()
-text_stats()
+# install.packages("devtools")
+# devtools::install_github("benmarwick/wordcountaddin", type = "source", dependencies = TRUE)
+# require(wordcountaddin)
+# word_count()
+# text_stats()
 ```
