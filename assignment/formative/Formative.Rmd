@@ -1,0 +1,65 @@
+---
+title: "Formative"
+author: "Zehao Qian"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Part 0: Prepare for the Runtime and Dataset
+
+```{r}
+# --------------------------------------------------------
+# clear the environment var area
+rm(list = ls())
+# clear all plots
+graphics.off()
+# clear the console area
+cat("\014")
+```
+
+```{r warning=FALSE,message=FALSE}
+require(lme4)
+require(lmerTest)
+require(ggplot2)
+require(sjPlot)
+```
+
+Download data set from GitHub and show the first lines.
+
+```{r}
+CRT <- read.csv("https://andygolightly.github.io/teaching/MATH43515/CRT.csv", header=TRUE)
+head(CRT)
+dim(CRT)
+```
+
+------------------------------------------------------------------------
+
+## Part 1: Introduction
+
+## Part 2: Methods
+
+## Part 3: Analysis
+
+## Part 4: Discussion of results
+
+------------------------------------------------------------------------
+
+## References
+
+[Evaluating Intervention Programs with a Pretest-Posttest Design: A Structural Equation Modeling Approach](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5332425/pdf/fpsyg-08-00223.pdf)
+
+## Word count
+
+```{r message=FALSE, warning=FALSE}
+# install.packages("devtools")
+# devtools::install_github("benmarwick/wordcountaddin", type = "source", dependencies = TRUE)
+require(wordcountaddin)
+word_count()
+text_stats()
+```

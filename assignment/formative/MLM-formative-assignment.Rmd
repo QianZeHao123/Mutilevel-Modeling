@@ -1,7 +1,7 @@
 ---
-title: "Multilevel Modelling Formative"
-author: "Zehao Qian"
-date: "`r Sys.Date()`"
+title: "Title of your report"
+author: "Leave author name blank"
+date: "Your submission date"
 output:
   pdf_document: default
   html_document: default
@@ -17,19 +17,16 @@ This is an R Markdown document. For more details on using R Markdown see <http:/
 
 This document serves a multiple purpose:
 
--   It provides you with some initial code which is needed in order to read the data which are required to complete this assignment;
--   It contains instructions on what is expected from your assignment;
--   You produce your actual assignment by adding text and code to this document, and eventually knitting it when finished.
+* It provides you with some initial code which is needed in order to read the data which are required to complete this assignment;
+* It contains instructions on what is expected from your assignment;
+* You produce your actual assignment by adding text and code to this document, and eventually knitting it when finished.
 
-Your finally submitted document will be a report, written in R Markdown, which may contain text, equations, code, and images, and which should be **1500** words long[^1]. It is admitted that "word count" may be an unclearly defined concept for such a heterogeneous document. We therefore recommend to use the `wordcountaddin` to establish your wordcount (see code at the end of this document). To avoid the document becoming excessively long, we think of an image as representing 50 words, and of R code contributing another 20 (or so) words per chunk. So, bottom-line, assuming that you have a reasonable number of such elements included into your report, then a word count of **1000** according to the `wordcountaddin` will be appropriate for this assignment[^2]. You *don't* need to evidence how this would add up to 1500 when accounting for code and/or figures.
+Your finally submitted document will be a report, written in R Markdown, which may contain text, equations, code, and images, and which should be **1500** words long^[In the summative assignment this would be 3000]. It is admitted that "word count" may be an unclearly defined concept for such a heterogeneous document. We therefore recommend to use the `wordcountaddin` to establish your wordcount (see code at the end of this document). To avoid the document becoming excessively long, we think of an image as representing 50 words, and of R code contributing another 20 (or so) words per chunk. So, bottom-line, assuming that you have a reasonable number of such elements included into your report, then a word count of **1000**  according to the `wordcountaddin` will be appropriate for this assignment^[In the summative assignment this would be 2000]. You *don't* need to evidence how this would add up to 1500 when accounting for code and/or figures.  
 
-[^1]: In the summative assignment this would be 3000
+**The final document needs to be a knitted PDF version of this Markdown document, with the `Preliminaries` section removed, and of course your content added. This is non-negotiable. MS Office documents will not be accepted.** 
 
-[^2]: In the summative assignment this would be 2000
+Your report needs to have four sections: Introduction, Methods, Analysis and Discussion of results. The framework of these is already set up below, with some indications of envisaged content. Within and between these four sections, you have some flexibility to move content around (in particular; these indications should not be understood as prescribing or limiting the scope of your work), but you should provide an overall sound story which addresses the overall question of this assignment. 
 
-**The final document needs to be a knitted PDF version of this Markdown document, with the `Preliminaries` section removed, and of course your content added. This is non-negotiable. MS Office documents will not be accepted.**
-
-Your report needs to have four sections: Introduction, Methods, Analysis and Discussion of results. The framework of these is already set up below, with some indications of envisaged content. Within and between these four sections, you have some flexibility to move content around (in particular; these indications should not be understood as prescribing or limiting the scope of your work), but you should provide an overall sound story which addresses the overall question of this assignment.
 
 #### R Packages
 
@@ -42,6 +39,7 @@ require(ggplot2)
 require(sjPlot)
 ```
 
+
 #### Data
 
 We now introduce the data to be used in this assignment. You can modify this part and move it into one of the subsections of your assignment as you deem appropriate.
@@ -53,48 +51,49 @@ CRT <- read.csv("https://andygolightly.github.io/teaching/MATH43515/CRT.csv", he
 head(CRT)
 dim(CRT)
 ```
-
 We see that the data set possesses 260 rows (=pupils) and 7 columns. These columns represent the following variables:
 
--   `Pupil`: anonymized student ID;
--   `School`: anonymized school ID $\{1,\ldots,20\}$;
--   `Class`: anonymized class ID $\{1,2\}$;
--   `Intervention`: Intervention indicator (0=control; 1=treatment);
--   `FSM`: pupil eligible for free school meal (0=not eligible; 1 =eligible)
--   `Pretest`: A pre-test score for each pupil;
--   `Posttest`: A post-test score for each pupil (**response**).
+* `Pupil`: anonymized student ID;
+* `School`: anonymized school ID $\{1,\ldots,20\}$;
+* `Class`: anonymized class ID $\{1,2\}$;
+* `Intervention`: Intervention indicator (0=control; 1=treatment);
+* `FSM`: pupil eligible for free school meal (0=not eligible; 1 =eligible)
+* `Pretest`: A pre-test score for each pupil;
+* `Posttest`: A post-test score for each pupil (**response**).
+
 
 #### Question of interest
 
-Does the educational \`Intervention' have a significant impact on student attainment (post-test)?
+Does the educational `Intervention' have a significant impact on student attainment (post-test)?
 
-------------------------------------------------------------------------
+---
 
 **Here your actual report will start. Remove all prior parts and the presentation section below before submitting.**
 
-------------------------------------------------------------------------
+---
 
 ## Introduction (20 marks)
 
-Give some brief background on randomized controlled trials and cluster randomized trials, and their relevance for assessing the effectiveness of an educational intervention. This subsection could also introduce the data, and give some simple illustrative exploratory analysis, without fitting any models.
+Give some brief background on randomized controlled trials and cluster randomized trials, and their relevance for assessing the effectiveness of an educational intervention. This subsection could also introduce the data, and give some simple illustrative exploratory analysis, without fitting any models. 
 
 ## Methods (20 marks)
 
-Explain what multilevel models do and why they are relevant for the modelling of randomized controlled trials. Explain how the 3-level cluster randomized trial discussed here fits into this framework. This subsection could also give details on how to decompose variance (ICC etc) and brief details of the methodology used to test for the absence or presence of variance components.
+Explain what multilevel models do and why they are relevant for the modelling of randomized controlled trials. Explain how the 3-level cluster randomized trial discussed here fits into this framework. This subsection could also give details on how to decompose variance (ICC etc) and brief details of the methodology used to test for the absence or presence of variance components.  
 
 ## Analysis (35 marks)
 
-This section should contain the actual modelling and data analysis. You are welcome to fit several potential models, and apply suitable tests or diagnostic tools to compare them. Possible questions to address are:
+This section should contain the actual modelling and data analysis. You are welcome to fit several potential models, and apply suitable tests or diagnostic tools to compare them. Possible questions to address are: 
 
-1.  What are the intra-class-correlations (ICCs) and variance partition coefficients (VPCs)?
+1. What are the intra-class-correlations (ICCs) and variance partition coefficients (VPCs)?   
 
-2.  What is the intervention effect and its confidence interval estimate; is the intervention effect significant?
+2. What is the intervention effect and its confidence interval estimate; is the intervention effect significant? 
 
-3.  How does the intervention effect change by including pre-test in the model? What role is played by FSM?
+3. How does the intervention effect change by including pre-test in the model? What role is played by FSM?   
+
 
 ## Discussion of results (15 marks)
 
-In this section you will discuss and summarize the results from your analysis in the light of the original problem: do these data give evidence that the intervention works? You can also discuss other aspects of your analysis e.g. limitations of the approach taken, and interpret the final fitted model.
+In this section you will discuss and summarize the results from your analysis in the light of the original problem: do these data give evidence that the intervention works?  You can also discuss other aspects of your analysis e.g. limitations of the approach taken, and interpret the final fitted model.
 
 ## Presentation (10 marks)
 
@@ -102,14 +101,18 @@ Marks for correct mathematical typesetting (where required), writing style, pres
 
 Remove this section from your final report.
 
-------------------------------------------------------------------------
+
+---
+
 
 ## Word count
 
 ```{r}
-# install.packages("devtools")
-# devtools::install_github("benmarwick/wordcountaddin", type = "source", dependencies = TRUE)
-# require(wordcountaddin)
-# word_count()
-# text_stats()
+#install.packages("devtools")
+#devtools::install_github("benmarwick/wordcountaddin", type = "source", dependencies = TRUE)
+require(wordcountaddin)
+word_count()
+text_stats()
 ```
+
+
