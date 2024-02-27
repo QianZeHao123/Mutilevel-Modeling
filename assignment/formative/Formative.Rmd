@@ -35,14 +35,56 @@ Download data set from GitHub and show the first lines.
 ```{r}
 CRT <- read.csv("https://andygolightly.github.io/teaching/MATH43515/CRT.csv", header=TRUE)
 head(CRT)
-dim(CRT)
+# dim(CRT)
 ```
 
 ------------------------------------------------------------------------
 
 ## Part 1: Introduction
 
+-   randomized controlled trials and cluster randomized trials
+
+<!-- -->
+
+-   Intro to the CRT data set
+
+    -   `Pupil`: anonymized student ID;
+
+    -   `School`: anonymized school ID $\{1,\dots,20\}$;
+
+    -   `Class`: anonymized class ID $\{1,2\}$;
+
+    -   `Intervention`: Intervention indicator (0=control; 1=treatment);
+
+    -   `FSM`: pupil eligible for free school meal (0=not eligible; 1 =eligible)
+
+    -   `Pretest`: A pre-test score for each pupil;
+
+    -   `Posttest`: A post-test score for each pupil (**response**).
+
+-   Histograms / Bar Plots / EDA with ggplots
+
+-   Check missing values
+
+-   Target: predict the Post-test
+
+```{r}
+tapply(CRT$School, CRT$class, table)
+```
+
 ## Part 2: Methods
+
+```{r}
+# empty model
+Model.0 = lmer(Posttest ~ 1 + (1 | School)
+                  + (1 | School:class),
+                  data = CRT)
+summary(Model.0)
+# --------------------------------------------------------
+REsummary <- as.data.frame(VarCorr(Model.0))
+REsummary
+# summary(Model.0)$varcor
+```
 
 ## Part 3: Analysis
 
