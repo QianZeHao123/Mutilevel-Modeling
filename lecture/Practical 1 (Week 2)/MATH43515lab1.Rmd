@@ -125,7 +125,8 @@ model <- lm(y~x)
 Recall that the `predict()` function can be used to generate fitted values $\hat{y}_i$, confidence and prediction intervals. The following code generates fitted values and the lower / upper limits of a 95% confidence interval for the mean response $\beta_0+\beta_1 x_i$:
 
 ```{r}
-fit.y <- predict(model,newdata = data.frame(x),interval = "confidence")
+fit.y <-
+  predict(model, newdata = data.frame(x), interval = "confidence")
 head(fit.y) #inspect first few rows
 ```
 

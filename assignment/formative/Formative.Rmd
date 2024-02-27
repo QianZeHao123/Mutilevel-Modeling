@@ -24,10 +24,14 @@ cat("\014")
 ```
 
 ```{r warning=FALSE,message=FALSE}
+## gridExtra is a good library for combining multiple ggplots graphs in one graph, while par() can't make it.
+# install.packages("gridExtra")
+# --------------------------------------------------------
 require(lme4)
 require(lmerTest)
 require(ggplot2)
 require(sjPlot)
+require(gridExtra)
 ```
 
 Download data set from GitHub and show the first lines.
@@ -43,11 +47,7 @@ head(CRT)
 ## Part 1: Introduction
 
 -   randomized controlled trials and cluster randomized trials
-
-<!-- -->
-
 -   Intro to the CRT data set
-
     -   `Pupil`: anonymized student ID;
 
     -   `School`: anonymized school ID $\{1,\dots,20\}$;
@@ -61,18 +61,68 @@ head(CRT)
     -   `Pretest`: A pre-test score for each pupil;
 
     -   `Posttest`: A post-test score for each pupil (**response**).
-
 -   Histograms / Bar Plots / EDA with ggplots
-
 -   Check missing values
-
 -   Target: predict the Post-test
 
 ```{r}
-tapply(CRT$School, CRT$class, table)
+# --------------------------------------------------------
+bar.Posttest = ggplot(data = CRT, aes(Posttest)) +
+  geom_bar()
+bar.Pretest = ggplot(data = CRT, aes(Pretest)) +
+  geom_bar()
+bar.Intervention = ggplot(data = CRT, aes(Intervention)) +
+  geom_bar()
+bar.School = ggplot(data = CRT, aes(School)) +
+  geom_bar()
+bar.FSM = ggplot(data = CRT, aes(FSM)) +
+  geom_bar()
+bar.class = ggplot(data = CRT, aes(class)) +
+  geom_bar()
+# --------------------------------------------------------
+# boxplot
+boxplot.Posttest = ggplot(data = CRT, aes(Posttest)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 1)
+boxplot.Pretest = ggplot(data = CRT, aes(Pretest)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 1)
+# --------------------------------------------------------
+# put these bar charts together
+grid.arrange(bar.Posttest,
+             bar.Pretest,
+             bar.Intervention,
+             bar.School,
+             bar.FSM,
+             bar.class,
+             ncol = 3)
+grid.arrange(boxplot.Posttest,
+             boxplot.Pretest,
+             ncol = 2)
+# --------------------------------------------------------
+# remove the plot cache memory
+remove(bar.Posttest)
+remove(bar.Pretest)
+remove(bar.Intervention)
+remove(bar.School)
+remove(bar.FSM)
+remove(bar.class)
+remove(boxplot.Posttest)
+remove(boxplot.Pretest)
+```
+
+```{r message=FALSE}
+# Correlation between 
+library("GGally")
+ggpairs(CRT)+theme_bw()
+```
+
+```{r}
+## Not good to read and analyse
+# tapply(CRT$School, CRT$class, table)
 ```
 
 ## Part 2: Methods
+
+## Part 3: Analysis
 
 ```{r}
 # empty model
@@ -85,8 +135,6 @@ REsummary <- as.data.frame(VarCorr(Model.0))
 REsummary
 # summary(Model.0)$varcor
 ```
-
-## Part 3: Analysis
 
 ## Part 4: Discussion of results
 
