@@ -393,11 +393,11 @@ summary(lm)
 Visualise the linear relationship.
 
 ```{r, message=FALSE}
-ggplot(data  = data, aes(x = ses, y = mathach))+
-  geom_point(size = 0.8, alpha = .8)+
-  geom_smooth(method="lm", se=FALSE, col="Red")+
+ggplot(data  = data, aes(x = ses, y = mathach)) +
+  geom_point(size = 0.8, alpha = .8) +
+  geom_smooth(method = "lm", se = FALSE, col = "Red") +
   ggtitle("Mathach vs. Ses") +
-  xlab("Ses") + 
+  xlab("Ses") +
   ylab("Mathach")
 ```
 

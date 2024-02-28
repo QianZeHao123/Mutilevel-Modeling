@@ -106,9 +106,9 @@ The first fitted value is $\hat{y}_{11}=$ `r pop.data$pred1[1]`. By using `fixef
 
 ```{r}
 fix <- as.numeric(fixef(model1))
-ranef1 <- as.numeric(ranef(model1)$class[1,])
+ranef1 <- as.numeric(ranef(model1)$class[1, ])
 newx <- c(1, pop.data$extraversion[1])
-fix%*%newx +ranef1%*%newx
+fix %*% newx + ranef1 %*% newx
 ```
 
 </details>
@@ -124,8 +124,9 @@ $$y_{ij}=\gamma_0 + u_j +\epsilon_{ij}$$
 The following code fits the empty model and summarises output.
 
 ```{r}
-intercept.only.model <- lmer(formula = popularity ~ 1 + (1|class),data    = pop.data) 
-summary(intercept.only.model)  
+intercept.only.model <-
+  lmer(formula = popularity ~ 1 + (1 | class), data = pop.data)
+summary(intercept.only.model)
 ```
 
 **TASK:** Calculate and interpret the intra-class correlation (ICC).
