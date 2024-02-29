@@ -67,9 +67,9 @@ We fit and summarise the random intercept only (empty model) via:
 
 ```{r}
 Model.0 <- lmer(Math ~ 1
-                 +(1|School)
-                 +(1|School:Classroom),  
-                 data=Sim3level)
+                + (1 | School)
+                + (1 | School:Classroom),
+                data = Sim3level)
 summary(Model.0)
 ```
 
@@ -96,7 +96,6 @@ sigv <- REsummary$vcov[2] #RE variance for school
 sigu <- REsummary$vcov[1] #RE variance for class
 totalvar <- sum(REsummary$vcov) #total variance
 vpc.school <- sigv/totalvar 
-
 vpc.class <- sigu/totalvar 
 vpc.school
 vpc.class

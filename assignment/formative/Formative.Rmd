@@ -1,6 +1,6 @@
 ---
-title: "Formative"
-author: "Zehao Qian"
+title: "Multilevel Modeling Formative"
+author: "Anonymous Marking Code: Z0195806"
 date: "`r Sys.Date()`"
 output:
   pdf_document: 
@@ -36,7 +36,9 @@ require(gridExtra)
 Download data set from GitHub and show the first lines.
 
 ```{r}
-CRT <- read.csv("https://andygolightly.github.io/teaching/MATH43515/CRT.csv", header=TRUE)
+CRT <-
+  read.csv("https://andygolightly.github.io/teaching/MATH43515/CRT.csv",
+           header = TRUE)
 head(CRT)
 # dim(CRT)
 ```
@@ -127,87 +129,134 @@ ggpairs(CRT)+theme_bw()
 
 ## Part 3: Analysis
 
+![Create Models Bottom-up](img/models.png)
+
 ```{r}
-# empty model / intercept-only model
-Model.0 = lmer(Posttest ~ 1 + (1 | School)
+# empty model / intercept-only mode
+Model.0.2level = lmer(Posttest ~ 1 + (1 | School),
+                  data = CRT)
+Model.0.3level = lmer(Posttest ~ 1 + (1 | School)
                   + (1 | School:class),
                   data = CRT)
+ranova(Model.0.2level)
+ranova(Model.0.3level)
+# Model.0.2level is better
+Model.0 = Model.0.2level
+```
+
+```{r}
 # summary(Model.0)
 # --------------------------------------------------------
 # REsummary <- as.data.frame(VarCorr(Model.0))
 # REsummary
 # summary(Model.0)$varcor
 # --------------------------------------------------------
-Model.1 = lmer(Posttest ~ Pretest + (1 | School)
-                  + (1 | School:class),
-                  data = CRT)
+Model.1 = lmer(Posttest ~ Pretest + (1 | School),
+               data = CRT)
 # summary(Model.1)
 # --------------------------------------------------------
-ranova(Model.0)
 ranova(Model.1)
 anova(Model.1, Model.0)
+# Model 1 is better than Model 0
 ```
 
 ```{r}
-Model.2 = lmer(Posttest ~ Pretest + (Pretest | School)
-                  + (1 | School:class),
-                  data = CRT)
+# Model 2 is not better than model 1
+Model.2 = lmer(Posttest ~ Pretest + (Pretest | School),
+               data = CRT)
 ranova(Model.2)
 anova(Model.2, Model.1)
 ```
 
 ```{r}
-Model.3 = lmer(Posttest ~ Pretest + (1 | School)
-               + (Pretest | School:class),
+# Model 3 (add FSM to Fix Effects) is not better than Model 1
+Model.3 = lmer(Posttest ~ Pretest + FSM + (1 | School),
                data = CRT)
 ranova(Model.3)
 anova(Model.3, Model.1)
 ```
 
 ```{r}
-Model.4 = lmer(Posttest ~ Pretest + FSM + (FSM | School)
-               + (1 | School:class),
+# Model 4 (add FSM to Random Effects) is not better than Model 1
+Model.4 = lmer(Posttest ~ Pretest + (FSM | School),
                data = CRT)
 ranova(Model.4)
 anova(Model.4, Model.1)
 ```
 
 ```{r}
-Model.5 = lmer(Posttest ~ Pretest + Intervention + (1 | School)
-               + (1 | School:class),
+Model.5 = lmer(Posttest ~ Pretest + Intervention + (1 | School),
                data = CRT)
 ranova(Model.5)
 anova(Model.5, Model.1)
 ```
 
 ```{r}
-Model.6 = lmer(Posttest ~ Pretest + Intervention + (1 | School)
-               + (Intervention | School:class),
+Model.6 = lmer(Posttest ~ Pretest + Intervention + (Intervention | School),
                data = CRT)
 ranova(Model.6)
 anova(Model.6, Model.5)
 ```
 
 ```{r}
-Model.7 = lmer(Posttest ~ Pretest + Intervention + (Intervention | School)
-               + (1 | School:class),
-               data = CRT)
-ranova(Model.7)
-anova(Model.7, Model.5)
+# require(performance)
+## https://easystats.github.io/performance/reference/icc.html
+# icc(Model.0)
+# icc(Model.1)
+# icc(Model.5)
+Model.0.REsummary <- as.data.frame(VarCorr(Model.0.3level))
+Model.0.REsummary
+sig <- Model.0.REsummary$vcov[3]  #Residual variance
+sigv <- Model.0.REsummary$vcov[2] #RE variance for school
+sigu <- Model.0.REsummary$vcov[1] #RE variance for class
+totalvar <- sum(Model.0.REsummary$vcov) #total variance
+vpc.school <- sigv / totalvar
+vpc.class <- sigu / totalvar
+cat('The VPC of School is: ', vpc.school, '\n')
+cat('The VPC of class is: ', vpc.class, '\n')
+# --------------------------------------------------------
+icc.school <- sigv / totalvar
+icc.class <- (sigu + sigv) / totalvar
+cat('The ICC of School is: ', icc.school, '\n')
+cat('The ICC of class is: ', icc.class, '\n')
+```
+
+### Model Visualization / Diagnostics
+
+```{r}
+resid0 = plot(Model.0)
+resid1 = plot(Model.1)
+resid5 = plot(Model.5)
+grid.arrange(resid0,
+             resid1,
+             resid5,
+             ncol = 3)
+remove(resid0, resid1, resid5)
 ```
 
 ```{r}
-require(performance)
-# https://easystats.github.io/performance/reference/icc.html
-icc(Model.0)
-icc(Model.1)
-icc(Model.2)
-icc(Model.3)
-icc(Model.4)
-icc(Model.5)
-icc(Model.6)
-icc(Model.7)
+qqnorm(resid(Model.5))
+qqline(resid(Model.5))
+```
 
+```{r}
+qqnorm(ranef(Model.5)[[1]][,1])
+qqline(ranef(Model.5)[[1]][,1])
+# qqnorm(ranef(Model.5)[[1]][,2])
+# qqline(ranef(Model.5)[[1]][,2])
+```
+
+```{r}
+CRT$Posttest.pred = predict(Model.5)
+ggplot(CRT,
+       aes(
+         x = Pretest,
+         y = Posttest,
+         col = School,
+         group = School
+       )) +
+  geom_line(aes(y = Posttest.pred)) +
+  scale_color_gradientn(colours = rainbow(100))
 ```
 
 ## Part 4: Discussion of results

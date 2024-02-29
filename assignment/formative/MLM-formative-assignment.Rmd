@@ -59,7 +59,9 @@ We now introduce the data to be used in this assignment. You can modify this par
 We consider data resulting from a 3-level cluster randomized educational trial. That is, each of 20 schools were randomly designated as either a control or to receive and educational intervention. Test scores were calculated for pupils from two classes in each school both before and after the time at which the intervention took place. The data can be read into a data frame `CRT` as follows:
 
 ```{r}
-CRT <- read.csv("https://andygolightly.github.io/teaching/MATH43515/CRT.csv", header=TRUE)
+CRT <-
+  read.csv("https://andygolightly.github.io/teaching/MATH43515/CRT.csv",
+           header = TRUE)
 head(CRT)
 dim(CRT)
 ```
