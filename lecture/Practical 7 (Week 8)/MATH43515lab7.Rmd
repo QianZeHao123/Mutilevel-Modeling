@@ -1,0 +1,414 @@
+---
+title: "Multilevel Modelling Practical 7 (Week 8)"
+subtitle: 
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+## Instructions - start here!
+
+**Exercise 1** involves the analysis of the data set used in Example 2 of the week 7 lecture. **Exercise 2** considers the data set on survival times from Example 3. **Exercise 3** involves a logistic regression model for Binomial data.
+
+```{r}
+# --------------------------------------------------------
+# clear the environment var area
+rm(list = ls())
+# clear all plots
+graphics.off()
+# clear the console area
+cat("\014")
+```
+
+## Exercise 1 (Aids data: Example 2 from lecture 7)
+
+Read in and visualize the data:
+
+```{r}
+aids <- read.table("https://andygolightly.github.io/teaching/MATH43515/aids.asc", header = TRUE)
+plot(aids, type="h")
+```
+
+Let's first ignore the fact that the data are counts and fit a simple linear regression model of the form
+
+$$y_i = \beta_0 +\beta_1 x_i + \epsilon_{i},\quad i=1,\ldots,14$$ where $x_i$ denotes the $i$th time point.
+
+```{r}
+lm1 <- lm(deaths~time, data=aids)
+plot(aids, type="h",ylim=c(-6,50))
+lines(aids$time, predict(lm1))
+```
+
+There are multiple issues here, in addition to ignoring the discrete nature of the response variable.
+
+$~$
+
+Let's use the Poisson distribution to model the response. Recall that if $Y\sim Po(\lambda)$ then $Y$ takes values $0,1,\ldots,$ with probabilities
+
+$$f(y)=\frac{e^{-\lambda}\lambda^y}{y!}=\exp\{y\log (\lambda)-\lambda-\log(y!)\}$$ with the latter in exponential family form. The mean of $Y$ is $\lambda$. We can check this via simulation:
+
+```{r}
+ypois <- rpois(10000,lambda=2) #simulate Po(2) realisations
+mean(ypois)
+var(ypois)
+```
+
+(It turns out that the variance is also $\lambda$. Try changing $\lambda$ and the number of simulations.)
+
+Now, we can identify the natural link function as $\log(\cdot)$. Hence, we will fit a GLM with $\log(\lambda_i)=\beta_0+\beta_1 x_i$.
+
+Fit a Poisson GLM and display the model summary:
+
+```{r}
+glm1 <- glm(deaths~time, family=poisson(link=log), data=aids)
+summary(glm1)
+```
+
+Add the fitted curve (expected number of aids cases as a function of time) to the plot with:
+
+```{r}
+plot(aids, type="h")
+lines(aids$time, predict(glm1, type="response"))
+```
+
+**TASK:** Reproduce this plot using `ggplot`. Hint: this will require `geom_segment()`.
+
+<details>
+
+<summary>Click for solution</summary>
+
+Reproduce the plot in ggplot:
+
+```{r,message=FALSE,warning=FALSE}
+require(ggplot2)
+aids$pred <- predict(glm1,type="response")
+ggplot(aids,aes(x=time,xend=time,y=0,yend=deaths))+
+  geom_segment()+
+  geom_line(aes(x=time,y=pred))+
+  xlab("time")+
+  ylab("deaths")
+```
+
+</details>
+
+$~$
+
+**TASK:** What would be the predicted number of deaths in month 15?
+
+There are three ways of answering this question:
+
+-   Manually, by implementing $\exp(\hat{\beta}_0+\hat{\beta}_1\times 15)$;
+-   Using function `predict` to obtain $\hat{\beta}_0+\hat{\beta}_1\times 15$, but still exponentiating the output;
+-   Using function `predict` with option `type="response"`, also avoiding the manual transformation.
+
+Try at least two of these and make sure that results match!
+
+<details>
+
+<summary>Click for solution</summary>
+
+Calculate the predicted number of deaths in month 15:
+
+```{r}
+exp(predict(glm1, newdata=data.frame(time=15)))
+# or
+predict(glm1, newdata=data.frame(time=15), type="response")
+# or
+exp(0.3396+0.2565*15)
+```
+
+</details>
+
+$~$
+
+## Exercise 2 (Leukaemia data: Example 3 from lecture 7)
+
+Read in and display the data
+
+```{r}
+leu <- read.table("https://andygolightly.github.io/teaching/MATH43515/leukaemie.asc", header=TRUE)
+
+plot(leu, xlab="log(# white blood cells)",ylab="survival time")
+```
+
+Let's fit a simple linear regression model of the form
+
+$$y_i = \beta_0 +\beta_1 x_i + \epsilon_{i},\quad i=1,\ldots,14$$ where $y_i$ denotes survival time and $x_i$ denotes the $i$th $\log_{10}$ white blood cell count.
+
+```{r}
+lm2 <- lm(time~wbc, data=leu)
+plot(leu, xlab="log(# white blood cells)",ylab="survival time")
+lines(leu$wbc, predict(lm2))
+```
+
+The model will predict a negative survival time for a $\log_{10}$ white blood cell count greater than around 5.15. We could fit a model of the form
+
+$$\log y_i = \beta_0 +\beta_1 x_i + \epsilon_{i},\quad i=1,\ldots,14$$ which would circumvent this issue. (In fact, this would be assuming a lognormal model for the response.) However, plotting the log response against the covariate gives:
+
+```{r}
+plot(log(leu), xlab="log(# white blood cells)",ylab="log survival time")
+```
+
+for which there is some suggestion of heteroscedasticity of errors about a hypothetical straight line fit.
+
+$~$
+
+We will instead model the expected response with a Gamma distribution.
+
+Use the following illustrative code to visualize the density function of the Gamma distribution for shape parameters 1, 2, 3, 4 and 5 (and use this to make clear to yourself why this distribution is useful for modelling waiting times).
+
+```{r}
+y <- seq(0,50, by=0.1)
+shape <- c(1,2,3,4,5)
+rate  <- c(1,1,1,1,1)
+
+plot(y, dgamma(y, shape[1], rate[1]), type="l",xlab="y",ylab="f(y)")
+for (j in 2:4)
+  {
+   lines(y, dgamma(y, shape[j], rate[j]), col=j)
+  }
+```
+
+If $Y\sim \text{Gamma}(a,b)$ for shape and rate parameters $a$ and $b$, the mean (expectation) of $Y$ is $\mu=a/b$. Let's consider a GLM with a log link function so that $\log(\mu_i) = \beta_0+\beta_1 x_i$ where $x_i$ is the $i$th value of $\log_{10}$ white blood cell count.
+
+**TASK:** Fit a generalized linear model with `time` as response, and `wbc` as predictor. Use a `Gamma` response distribution and a log link. Save the model as `glm2`.
+
+<details>
+
+<summary>Click for solution</summary>
+
+Fit a generalized linear model with `time` as response, and `wbc` as predictor. Use a `Gamma` response distribution and a log link:
+
+```{r}
+glm2 <- glm(time ~ wbc, family=Gamma(link=log), data=leu)
+summary(glm2)
+```
+
+</details>
+
+$~$
+
+Now plot the fitted response as a function of `wbc` by running the following code:
+
+```{r,eval=FALSE}
+plot(leu, xlab="log(number of white blood cells)",ylab="survival time")
+lines(leu$wbc[order(leu$wbc)], predict(glm2, type="response")[order(leu$wbc)])
+```
+
+**TASK:** In the above, why is the use of `order` necessary?
+
+<details>
+
+<summary>Click for solution</summary>
+
+```{r,echo=FALSE}
+plot(leu, xlab="log(number of white blood cells)",ylab="survival time")
+lines(leu$wbc[order(leu$wbc)], predict(glm2,type="response")[order(leu$wbc)])
+```
+
+Note that the `lines` function will draw *straight lines* between x values specified by `wbc` and y values specified by the corresponding prediction. Without ordering `wbc` (and the corresponding predictions accordingly), the resulting plot will look rather strange! Try it out!
+
+</details>
+
+$~$
+
+**TASK:** recreate the above plot using `ggplot`.
+
+<details>
+
+<summary>Click for solution</summary>
+
+Using `ggplot`:
+
+```{r}
+leu$pred <- predict(glm2,type="response")
+ggplot(leu,aes(x=wbc,y=time))+
+  geom_point()+
+  geom_line(aes(x=wbc[order(wbc)],y=pred[order(wbc)]))+
+  xlab("log(number of white blood cells)")+
+  ylab("survival time")
+```
+
+</details>
+
+$~$
+
+**TASK:** Predict the survival time for a white blood cell count of 160.
+
+<details>
+
+<summary>Click for solution</summary>
+
+Predict the survival time for a white blood cell count of 160:
+
+```{r}
+predict(glm2,newdata=data.frame(wbc=log10(160)), type="response")
+```
+
+</details>
+
+$~$
+
+**HARDER:** What does the following code do? (assuming that `glm3` contains the fitted model). After spending some time thinking about this, uncover the solution for a bonus plot.
+
+```{r,eval=FALSE}
+out <- predict(glm2,newdata=data.frame(wbc=log10(160)), type="link",se.fit=TRUE)
+c(exp(out$fit-2*out$se.fit),exp(out$fit+2*out$se.fit))
+```
+
+<details>
+
+<summary>Click for solution</summary>
+
+The following code produces an approximate 95% confidence interval for the expected survival time given a white blood cell count of 160.
+
+```{r}
+out <- predict(glm2,newdata=data.frame(wbc=log10(160)), type="link",se.fit=TRUE)
+c(exp(out$fit-2*out$se.fit),exp(out$fit+2*out$se.fit))
+```
+
+Note that we first find an interval for the *linear predictor* and then run this through the *response function* (which is the `exp` function for this example).
+
+**Bonus** - overlay a 95% confidence interval:
+
+```{r}
+out <- predict(glm2, type="link",se.fit=TRUE)
+leu$lower <- exp(out$fit-2*out$se.fit)
+leu$upper <- exp(out$fit+2*out$se.fit)
+ggplot(leu,aes(x=wbc,y=time))+
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1)+
+  geom_point()+
+  geom_line(aes(x=wbc[order(wbc)],y=pred[order(wbc)]))+
+  xlab("log(number of white blood cells)")+
+  ylab("survival time")
+```
+
+</details>
+
+$~$
+
+## Exercise 3: Toxoplasmosis data (Binomial logistic regression)
+
+The so-called rainfall or toxoplasmosis data give the number of subjects (`Cases`) out of (`Total`) testing positively for toxoplasmosis in each of 34 cities in El Salvador. The covariate `Rain` is the the annual rainfall in mm. Please load the data and carry out the following operation to create a variable `x` giving the annual rainfall per 1000mm:
+
+```{r,message=FALSE}
+require(npmlreg)
+data(rainfall)
+rainfall$x <- rainfall$Rain/1000
+```
+
+This is, again, an example for logistic regression. We want to model a probability of "success" (occurence of a binary event; here toxoplasmosis infection) as a function of covariates (here: `Rain`). However, here the situation is different to the `shuttle` example. Now the response is not just Bernoulli (failure or non-failure), but Binomial, where we have, for each observation, the number of Cases ($y$) out of total tests carried out ($n$). Note that the model is now $Y \sim \text{Binomial}(n,\pi)$, where the observed ratio $y/n$ can be interpreted as an empirical estimate of the probability, $\pi$, of "success". The fitting methodology does however not use this ratio directly. One needs to give the full vectors of successes and non-successes, $y$ and $n-y$, to `glm`, as follows:
+
+```{r}
+toxo.glm <- glm(cbind(Cases,Total-Cases) ~ x, family=binomial(link=logit), data=rainfall)
+summary(toxo.glm)
+```
+
+An alternative way of supplying this information is as follows.
+
+```{r}
+glm(Cases/Total ~ x, family=binomial(link=logit), weights=Total, data=rainfall)
+```
+
+$~$
+
+**TASK:** Check whether the model fit improves when including higher powers of `x` (quadratic, cubic,...). Consider the value of AIC to answer this question.
+
+*Hint:* Functions of variables can be included into the linear predictor using `I(.)`.
+
+<details>
+
+<summary>Click for solution</summary>
+
+```{r}
+toxo2.glm <- glm(Cases/Total ~ x+I(x^2), family=binomial(link=logit), 
+                 weights=  Total, data=rainfall)
+
+toxo2.glm
+
+toxo3.glm <- glm(Cases/Total ~ x+I(x^2)+I(x^3), family=binomial(link=logit),
+                 weights=  Total, data=rainfall)
+toxo3.glm
+```
+
+We see a relatively big drop in AIC for the final model, so let's go with `toxo.glm`.
+
+</details>
+
+$~$
+
+**TASK:** Using your model settled on just above, predict the ratio of toxoplasmosis infections for a city in El Salvador with annual rainfall of 2000mm.
+
+<details>
+
+<summary>Click for solution</summary>
+
+```{r}
+predict(toxo3.glm, newdata=data.frame(x=2), type="response")
+```
+
+</details>
+
+$~$
+
+**TASK:** Compute the predicted toxoplasmsosis incidence as a function of rainfall. Plot the fitted curve versus rainfall.
+
+<details>
+
+<summary>Click for solution</summary>
+
+```{r}
+toxo3.predict <- predict(toxo3.glm, type="response")
+rainfall3 <- cbind(rainfall, toxo3.predict)
+plot(rainfall$x, rainfall$Cases/rainfall$Total, ylab="Cases/Total")
+lines(rainfall$x[order(rainfall$x)], toxo3.predict[order(rainfall$x)])
+```
+
+</details>
+
+$~$
+
+**TASK**: Reproduce the plot using `ggplot2`.
+
+<details>
+
+<summary>Click for solution</summary>
+
+```{r}
+ggplot(data  = rainfall, aes(x = x, y = Cases/Total)) +
+       geom_point(size=0.7) + 
+       geom_line(color='red', data = rainfall3, aes(x=x, y=toxo3.predict))
+```
+
+</details>
+
+$~$
+
+**TASK (harder)** Add confidence bands for the fitted curve to the just created plot. *Hint:* use `geom_smooth` with `method=glm` and specify a formula for the model.
+
+<details>
+
+<summary>Click for solution</summary>
+
+Rather than obtain an interval for the linear predictor before running through the response function, we can use `geom_smooth`.
+
+```{r,message=FALSE,warning=FALSE}
+ggplot(data  = rainfall, aes(x = x, y = Cases/Total)) +
+      geom_point(size=0.7) + 
+      geom_smooth(method = glm,
+                formula=cbind(rainfall$Cases,rainfall$Total-rainfall$Cases)~
+                    x+I(x^2)+I(x^3), 
+                method.args=list(family="binomial"), 
+                se = TRUE, 
+                size = .5, 
+                alpha  = .8)
+```
+
+</details>
+
+How do you reconcile the relatively narrow bounds with the fact that so many observations lie scattered well outside those bounds?
+
+$~$
+
+## \## End of lab!
