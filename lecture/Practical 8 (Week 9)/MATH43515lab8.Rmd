@@ -1,0 +1,222 @@
+---
+title: "Multilevel Modelling Practical 8 (Week 9)"
+subtitle:
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+## Instructions - start here!
+
+**Exercise 1** involves the analysis of the Betablocker data set used in last week's lecture. **Exercise 2** digs a little deeper using the same data set. **Exercise 3** considers the Toxoplasmosis data from last week's lab. The remaining time can be used to work on the summative assessment. 
+
+## Preliminaries
+
+We load the R packages  *lme4* and *ggplot2*.
+
+```{r,message=FALSE,warning=FALSE}
+require(lme4)       # contains glmer
+require(ggplot2)    # for the use of ggplot
+```
+
+
+## Exercise 1: Betablocker data
+
+We will initially reproduce the analysis as demonstrated in the lecture.  We read the betablocker data directly from the internet.
+
+```{r}
+betablok <- read.table(
+  'https://andygolightly.github.io/teaching/MATH43515/betablok.dat')
+head(betablok)
+```
+Add trial and centre information:
+
+```{r}
+names(betablok) <- c('r','n')
+betablok$treat <- factor(gl(2,1),labels=c(0,1))
+betablok$center <- gl(22,2)
+```
+
+Let's take a quick look at data layout:
+
+```{r}
+dim(betablok)
+head(betablok)
+```
+
+We now consider the GLM fit after ignoring multi-level structure:
+
+```{r}
+betablok.glm <- glm(cbind(r,(n-r))~treat,data=betablok,family=binomial)
+summary(betablok.glm)
+```
+
+Note the AIC value of 527. Recall that AIC is given by $2(p+1)-2\log\hat{L}$ where $\log\hat{L}$ is the maximised log-likelihood. When comparing two (potentially non-nested) models, we prefer the model with smaller AIC.
+
+$~$
+
+Now account for two-level structure, with `center` (i.e. hospital) in the upper level:
+
+```{r}
+summary(betablok.glmer <- glmer(cbind(r,(n-r))~treat+(1|center), data=betablok, family=binomial)) 
+```
+
+Note the AIC value of 324. Let's think about the treatment effect. We have the following model:
+\[
+Y_{ij} \sim \text{Binomial}(n_{ij},\pi_{ij})
+\]
+for treatment $i$ in center $j$. Note that $\pi_{ij}$ is the probability of patient mortality for that treatment-center combination. We further have via the *logit* link that
+\[
+\log\left(\frac{\pi_{ij}}{1-\pi_{ij}}\right)=a+u_j+b x_{ij}
+\]
+which gives
+\[
+\pi_{ij}= \frac{e^{a+u_j+b x_{ij}}}{1+e^{a+u_j+b x_{ij}}}
+\]
+where $x_{ij}$ is 0 or 1 for no treatment versus treatment and $u_j\sim N(0,\sigma^2_u)$ is the random intercept term. When $x_{ij}=0$ the expected log-odds ratio is
+\[
+\hat{a}=-2.2.
+\]
+When $x_{ij}=1$, the expected log-odds ratio is
+\[
+\hat{a}+\hat{b} = -2.2 - 0.26.
+\]
+Hence, the effect of treatment is the change the log-odds ratio by -0.26 and therefore multiplys the odds-ratio (in favour of death) by $\exp(-0.26)=0.77$. That is, the treatment *appears to be effective in reducing probability of patient mortality*. 
+
+This observation has also been made in the literature; e.g. Aitkin et al (2009, Statistical Modelling in R, page 526), note: "The treatment produces a significant, though small, reduction in death risk compared to the control: the odds of death are reduced...".
+
+$~$
+
+We can do a little diagnostc checking by looking at the normality assumption for the random intercept terms:
+```{r}
+qqnorm(ranef(betablok.glmer)$center[,1])
+qqline(ranef(betablok.glmer)$center[,1])
+```
+
+which doesn't look too bad given the size of the data set. 
+
+## Exercise 2 (digging deeper)
+
+This is a multi-centre trial, so (in terms of analysis) comparable to a multi-site trial. Hence, a natural extension of the preceding analysis would be the consideration of random slopes. 
+
+Adapt the model `betablok.glmer` accordingly so that it allows for centre-specific slopes.
+
+```{r}
+summary(betablok.glmer2<-glmer(cbind(r,(n-r))~treat+(treat|center),  
+                               data=betablok,family=binomial)) 
+```
+
+**TASK:** Consider AIC. Do the random slopes appear to be worth including?
+
+<details><summary>Click for solution</summary>
+The AIC is 327.7, which has increased (from 324.4 for the random intercept model). Hence, it appears that random slopes are not needed.
+</details>
+
+$~$
+
+**TASK:** Apply the `anova` function on the pair of models to endorse your judgement. (Note: both models are fitted using maximum likelihood so using `anova` here is perfectly acceptible. We used `ranova` to compare models with and without random slopes in the linear mixed effect model setting due to `lmer` using restricted maximum likelihood to perform the fitting.)
+
+<details><summary>Click for solution</summary>
+```{r}
+anova(betablok.glmer, betablok.glmer2)
+```
+
+We have insufficient evidence to reject the null hypothesis that the random slope variance is zero. We don't need the random slopes.
+</details>
+
+$~$
+
+Inspect the random intercept and slope values for `betablok.glmer2` (using `plot_model`): 
+
+```{r,message=FALSE,warning=FALSE}
+require(sjPlot)
+plot_model(betablok.glmer2, type="re")
+```
+
+What can you say about the random treatment slopes?
+
+$~$
+
+Let's do some additional diagnostic checking for the random intercept and slope model. Start with diagnostics for the random effects:
+
+```{r}
+qqnorm(ranef(betablok.glmer2)$center[[1]]) #random intercepts
+qqline(ranef(betablok.glmer2)$center[[1]])
+qqnorm(ranef(betablok.glmer2)$center[[2]]) #random slopes
+qqline(ranef(betablok.glmer2)$center[[2]])
+```
+
+**TASK:** What is your overall conclusion?
+
+<details><summary>Click for solution</summary>
+Including random slopes does not seem worthwhile. This conclusion is supported by AIC, the likelihood ratio test and the plot of the fitted random slope effects (which are very similar, suggesting very small variance).
+
+Overall, the combined studies point towards a small reduction of death risk due to the use betablockers.
+</details>
+
+$~$
+
+## Exercise 3 (optional): Toxoplasmosis data revisited
+
+We revisit the Toxoplasmosis (rainfall) data from the previous practical. We load and prepare the data frame as previously.
+
+```{r,message=FALSE,warning=FALSE}
+require(npmlreg)
+data(rainfall)
+rainfall$x <- rainfall$Rain/1000
+```
+
+We had fitted the following two logistic models, and identified some superiority of the cubic over the linear moodel. 
+
+```{r}
+toxo.glm <- glm(cbind(Cases,Total-Cases) ~ x, 
+  family=binomial(link=logit), data=rainfall)
+summary(toxo.glm)
+
+toxo3.glm <- glm(cbind(Cases,Total-Cases) ~ x+I(x^2)+I(x^3),
+  family=binomial(link=logit), data=rainfall)
+summary(toxo3.glm)
+```
+
+Endorse this result by applying `anova` onto this pair of models:
+
+```{r}
+anova(toxo.glm,toxo3.glm,test="LRT")
+```
+
+In the previous practical we already expressed some suspicion about the relevance of the cubic term: While statistically significant, is it "really there", or are we "overfitting" a random feature of this data?  
+
+In this connection it is worth recalling a basic feature of the Binomial model: It is a one-parameter distribution, with a fixed mean-variance relationship (just as the Poisson model, but unlike the Normal or Gamma model) and with no scale parameter to absorb "excess variability". If the data possess more inherent variability than this rigid mean-relationship allows, one speaks of "overdispersion". 
+
+It turns out that one way of addressing this problem is two consider the data set "artificially" as a two-level model, i.e. to introduce a random effect for the "upper level" which however coincides with the observation index (Aitkin et al, Statistical Modelling in R, page Sec 8.4.3.). That is, each observation
+gets assigned its own random effect, which then can absorb the excess variation. Create a vector of observation ID's,
+
+```{r}
+rainfall$ID <- 1:34
+```
+
+and then fit an "empty" model only containing the random effect for the IDs, that is `(1|D)`.
+
+```{r}
+
+toxo.glmm3 <- glmer(cbind(Cases,Total-Cases) ~ (1|ID),
+  family=binomial, data=rainfall)
+summary(toxo.glmm3)
+```
+
+We see that this model leads to a lower AIC than any of the models considered previously!
+
+We conclude that there is no actual dependency of toxoplasmosis rates on rainfall, and that the observed cubic trend has been due to unexplained excess variability (=overdispersion).
+
+$~$
+
+## Summative assessment
+
+If there is still time remaining, please use this to work on your summative assessment.
+
+
+## End of lab!
+---
+

@@ -1,0 +1,222 @@
+---
+title: "Multilevel Modelling Practical 9 (Week 10)"
+subtitle:
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+## Dealing with missing values
+
+Missing values in data are a common phenomenon in real world problems. Knowing how to handle missing values effectively is a required step to reduce bias and to produce powerful models. In this final workshop, we will explore different methods of handling missing data.
+
+$~$
+
+#### Data preparation and pattern
+
+We will use the Boston Housing dataset in the `mlbench` package to discuss the various approaches to treating missing values. Though the original Boston Housing data doesn’t have missing values, we will randomly introduce missing values. This way, we can validate the imputed missing values against the actual observations, so that we know how effective are the approaches in reproducing the actual data. Lets begin by importing the data from the `mlbench` package and randomly insert missing values (NA).
+
+```{r,message=FALSE,warning=FALSE}
+require(mlbench)
+data ("BostonHousing", package="mlbench")  
+# initialize the data  # load the data
+original <- BostonHousing  
+# backup original data
+# Introduce missing values
+
+set.seed(100)
+BostonHousing[sample(1:nrow(BostonHousing), 40), "rad"] <- NA
+BostonHousing[sample(1:nrow(BostonHousing), 40), "ptratio"] <- NA
+head(BostonHousing)
+```
+
+The missing values have been inserted in the `rad` (index of accessibility to radial highways) and `ptratio` (pupil-teacher ratio by town). Though we know where the missing values are, let's quickly check the ‘missings’ pattern using `md.pattern` (a function in `mice` package).
+
+```{r,message=FALSE,warning=FALSE}
+require(mice)
+md.pattern(BostonHousing)
+# pattern or missing values in data.
+```
+
+We see that 36 rows in the data set have a missing value on just `ptratio`, 36 have a missing value on just `rad` and 4 rows have both `rad` and `ptratio` as missing.
+
+$~$
+
+#### Method 1. Deleting the observations
+
+If you have large number of observations in your data set, where all the cases to be predicted are sufficiently well represented in the data, then try deleting (or not to include missing values while model building, for example by setting `na.action=na.omit`) those observations (rows) that contain missing values. Let's regress `medv` on `ptratio` and `rad` after deleting the missingness (that is, deleting the rows for which there is at least one missing value), and compare against a model fit that uses the original data set:
+
+```{r}
+# Example - regress medv (value of homes) on ptratio and rad
+model1 <- lm(medv ~ ptratio + rad, data=BostonHousing, na.action=na.omit) #though na.omit is the default in lm()
+summary(model1)
+model2 <- lm(medv ~ ptratio + rad, data=original)
+summary(model2)
+```
+
+Compare summaries - we see relatively little difference in output.
+
+$~$
+
+Let's dig a little deeper with a synthetic data experiment. We will simulate data from a simple linear regression model, then repeatedly delete a proportion specified by the user, and compare fitted lines.
+
+```{r}
+set.seed(43515)
+sim <-function(prop=0.1,N=50)
+{
+  x <- runif(100,-10,10)
+  y <- rnorm(100,1+2*x,5)
+  plot(x,y)
+  abline(lm(y~x))
+  for(i in 1:N)
+  {
+    indices <- sample(1:100,round(100*prop))
+    ymis <- y[-indices]
+    xmis <- x[-indices]
+    lines(abline(lm(ymis~xmis),col=i))
+  }
+}
+```
+
+**TASK:** Make sure you understand what the above function is doing. Execute the function for different values of `prop` e.g. 0.1, 0.5, 0.9. Is the behaviour as expected?
+
+<details>
+
+<summary>Click for solution</summary>
+
+```{r}
+#prop=0.1
+sim()
+#prop=0.5
+sim(prop=0.5)
+#prop=0.8
+sim(prop=0.9)
+```
+
+Unsurprisingly, the lines become more variable as the proportion of missingness increases. Nevertheless, if we were to look at the average intercept and slope values, we'd find that these would be close to the ground truth values. The missingness mechanism is MCAR so we expect increased variance in the parameter estimates but no increase in bias.
+
+</details>
+
+$~$
+
+#### 2. Imputation with mean / median / mode
+
+Replacing the missing values with the mean / median / mode is a crude way of treating missing values. Depending on the context, e.g. if the variation is low or if the variable has low leverage over the response, such a rough approximation is acceptable and could possibly give satisfactory results.
+
+Let's impute using the mean for the Boston Housing data `ptratio` variable. The following code chunk demonstrates how this can be done without overwriting the `BostonHousing` data.
+
+```{r,warning=FALSE,message=FALSE}
+BostonHousing2 <- BostonHousing #Copy the data to avoid an overwrite
+BostonHousing2$ptratio[is.na(BostonHousing2$ptratio)] <- mean(BostonHousing2$ptratio, na.rm = TRUE) 
+md.pattern(BostonHousing2)  
+```
+
+Compute the accuracy:
+
+```{r,warning=FALSE,message=FALSE}
+# remotes::install_github("cran/DMwR") #uncomment to install
+require(DMwR)
+actuals <- original$ptratio[is.na(BostonHousing$ptratio)]
+predicteds <- rep(mean(BostonHousing$ptratio, na.rm=TRUE), length(actuals))
+regr.eval(actuals, predicteds)
+```
+
+Note the RMSE value. We will use benchmark further methods against this.
+
+$~$
+
+#### 3. Prediction
+
+#### 3.1. kNN Imputation
+
+`DMwR::knnImputation` uses a k-Nearest neighbours approach to impute missing values. kNN imputation in simpler terms is as follows: for every observation to be imputed, it identifies the ‘k’ closest observations based on euclidean distance and computes the weighted average (weighted based on inverse distance) of these ‘k’ observations.
+
+The advantage is that you can impute all the missing values in all variables with one call to the function. It takes the whole data frame as the argument and you don’t even have to specify which variable you want to impute.
+
+```{r}
+knnOutput <- knnImputation(BostonHousing)  #Don't include the response.
+anyNA(knnOutput)
+```
+
+Compute the accuracy using just the `ptratio` variable (to allow comparison with that obtained when using mean imputation).
+
+```{r}
+actuals <- original$ptratio[is.na(BostonHousing$ptratio)]
+predicteds <- knnOutput[is.na(BostonHousing$ptratio), "ptratio"]
+regr.eval(actuals, predicteds)
+```
+
+How much has root mean square error (RMSE) improved by?
+
+$~$
+
+#### 3.2 mice
+
+"mice" is short for "Multivariate Imputation by Chained Equations" and is an R package that provides advanced features for missing value treatment. It uses a slightly uncommon way of implementing the imputation in 2-steps, using `mice()` to build the model and `complete()` to generate the completed data. The `mice(df)` function produces multiple complete copies of the data frame `df`, each with different imputations of the missing data. The `complete()` function returns one or several of these data sets, with the default being the first.
+
+Let's see how to impute `ptratio`.
+
+```{r}
+miceMod <- mice(BostonHousing, method="norm.predict")  # perform mice imputation, based on linear regression.
+miceOutput <- complete(miceMod)  # generate the completed data.
+anyNA(miceOutput)
+```
+
+The `norm.predict` argument uses predicted values from linear regression to impute the missingness. Have a look at the help file for `mice` to see what other methods are possible. For those that did the Machine Learning module, several will be familiar!
+
+Compute the accuracy of `ptratio`:
+
+```{r}
+actuals <- original$ptratio[is.na(BostonHousing$ptratio)]
+predicteds <- miceOutput[is.na(BostonHousing$ptratio), "ptratio"]
+regr.eval(actuals, predicteds)
+```
+
+We seem to be doing worse (or at least no better?) than the knn approach (but we're not really harnessing the full power of the `mice` package).
+
+An additional benefit of `mice` is that it can also handle factors.
+
+The `rad` variable takes values from $\{1,2,\ldots,24\}$. There may be good reasons for treating it as continuous, but for the purposes of demonstration, let's treat it as discrete.
+
+```{r}
+miceMod <- mice(BostonHousing, method="cart") #perform mice imputation, based on classification and regression trees (CART).
+miceOutput <- complete(miceMod)  #generate the completed data.
+anyNA(miceOutput)
+```
+
+Now compute the accuracy of rad:
+
+```{r}
+actuals <- original$rad[is.na(BostonHousing$rad)]
+predicteds <- miceOutput[is.na(BostonHousing$rad), "rad"]
+mean(actuals != predicteds)  # compute misclass error.
+```
+
+Note that classification and regression trees (the imputation method used above) is beyond the scope of the course (although several of you will remember it from the Machine Learning module).
+
+Let's complete the multiple imputation workflow. We use the `with` function to fit the regression model to each of the 5 imputed data sets:
+
+```{r}
+model3 <- with(miceMod,lm(medv ~ ptratio + rad))
+summary(model3)
+```
+
+Finally, use the `pool` function to pool results:
+
+```{r}
+summary(pool(model3))
+```
+
+If you wish, you can compare the results to those obtained using the orginal data set.
+
+$~$
+
+#### **References**
+
+Rubin, D. B. Multiple imputation for nonresponse in surveys. John Wiley & Sons, 1987.
+
+Schafer, J.L. (1997). Analysis of Incomplete Multivariate Data. London: Chapman & Hall. Table 6.14.
+
+Van Buuren, S. and Groothuis-Oudshoorn, K. (2011). mice: Multivariate Imputation by Chained Equations in R. Journal of Statistical Software, 45(3), 1-67. pdf
