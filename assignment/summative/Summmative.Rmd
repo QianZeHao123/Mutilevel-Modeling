@@ -1,17 +1,29 @@
 ---
 title: "Multilevel Modeling Summative"
-author: "Zehao Qian"
+author: "Anonymous Marking Code: Z0195806"
 date: "`r Sys.Date()`"
-output: html_document
+output:
+  pdf_document: 
+    latex_engine: xelatex
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+# Part 1 Introduction
 
 ```{r warning=FALSE,message=FALSE}
+# --------------------------------------------------------
+## clear the environment var area
+# rm(list = ls())
+## clear all plots
+# graphics.off()
+## clear the console area
+# cat("\014")
+# --------------------------------------------------------
+# install.packages("gridExtra")
+# --------------------------------------------------------
 require(lme4)
 require(lmerTest)
 require(ggplot2)
@@ -25,5 +37,22 @@ MST <-
     header = TRUE
   )
 head(MST)
-dim(MST)
+# dim(MST)
 ```
+
+```{r}
+library(ggplot2)
+
+```
+
+```{r message=FALSE}
+# Correlation between two varibales with GGpairs
+library("GGally")
+ggpairs(MST)+theme_bw()
+```
+
+# Part 2 Methods
+
+# Part 3 Analysis
+
+# Part 4 Discussion of results

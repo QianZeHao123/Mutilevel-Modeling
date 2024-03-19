@@ -3,7 +3,8 @@ title: "Title of your report"
 author: "Leave author name blank"
 date: "Your submission date"
 output:
-  pdf_document: default
+  pdf_document: 
+    latex_engine: xelatex
   html_document: default
 ---
 
@@ -116,8 +117,8 @@ Remove this section from your final report.
 ## Word count
 
 ```{r}
-#install.packages("devtools")
-#devtools::install_github("benmarwick/wordcountaddin", type = "source", dependencies = TRUE)
+# install.packages("devtools")
+# devtools::install_github("benmarwick/wordcountaddin", type = "source", dependencies = TRUE)
 require(wordcountaddin)
 word_count()
 text_stats()
