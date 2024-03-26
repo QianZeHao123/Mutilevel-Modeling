@@ -5,6 +5,7 @@ date: "`r Sys.Date()`"
 output:
   pdf_document: 
     latex_engine: xelatex
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
@@ -12,6 +13,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Part 1 Introduction
+
+## 1.1 Background of Multisite Trials
+
+## 1.2 
 
 ```{r warning=FALSE,message=FALSE}
 # --------------------------------------------------------
@@ -30,19 +35,28 @@ require(ggplot2)
 require(sjPlot)
 ```
 
+Download the dataset "MST" only once from GitHub and save it to csv files.
+
 ```{r}
-MST <-
-  read.csv(
-    "https://andygolightly.github.io/teaching/MATH43515/summative/andy.csv",
-    header = TRUE
-  )
+# MST <-
+#   read.csv(
+#     "https://andygolightly.github.io/teaching/MATH43515/summative/andy.csv",
+#     header = TRUE
+#   )
+# write.csv(MST, "MST.csv")
+MST = read.csv("./MST.csv")
 head(MST)
 # dim(MST)
+## Show three line table MST with sjPlot::tab_df
+# tab_df(MST[1:5, ])
+```
+
+```{r}
+
 ```
 
 ```{r}
 library(ggplot2)
-
 ```
 
 ```{r message=FALSE}
