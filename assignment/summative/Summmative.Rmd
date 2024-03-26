@@ -6,6 +6,7 @@ output:
   pdf_document: 
     latex_engine: xelatex
     toc: true
+bibliography: references.bib
 ---
 
 ```{r setup, include=FALSE}
@@ -16,7 +17,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## 1.1 Background of Multisite Trials
 
-## 1.2 
+**Definition of Multisite Trials**: Multisite trials are a type of clinical research study where the intervention being tested is administered across multiple sites or locations. These trials are particularly valuable in assessing the effectiveness of an intervention in a broader, more diverse population. By including a variety of settings, such as different hospitals, clinics, or communities, multisite trials can provide more generalizable results, ensuring that the findings are not specific to a single location or population [@YouthEndowmentFund2024].
+
+## 1.2 Intro to the MST Dataset
 
 ```{r warning=FALSE,message=FALSE}
 # --------------------------------------------------------
@@ -52,10 +55,6 @@ head(MST)
 ```
 
 ```{r}
-
-```
-
-```{r}
 library(ggplot2)
 ```
 
@@ -70,3 +69,16 @@ ggpairs(MST)+theme_bw()
 # Part 3 Analysis
 
 # Part 4 Discussion of results
+
+# Word Count
+
+```{r message=FALSE, warning=FALSE}
+# install.packages("devtools")
+# devtools::install_github("benmarwick/wordcountaddin",
+#                          type = "source", dependencies = TRUE)
+require(wordcountaddin)
+word_count()
+text_stats()
+```
+
+# References
