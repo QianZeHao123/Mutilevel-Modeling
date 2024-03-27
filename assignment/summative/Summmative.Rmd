@@ -337,7 +337,7 @@ Multilevel models (MLMs) are crucial for analyzing the MST dataset's hierarchica
 
 According to fit the model, I choose Generalized Linear Mixed Model (GLMM), the reasons are shown below:
 
--   Limitation of Traditional Linear Model: Unlike traditional linear models that assume normally distributed residuals, GLMMs can handle various types of distributions for the response variable (e.g., binomial for binary data, Poisson for count data, etc.), which is essential for modeling the positive integer nature of stress scores. In Section 1.3.2, we found that the Stress Scores of nurses we want to fit are positive integers (count data, not continuous data).
+-   Limitation of Traditional Linear Model: Unlike traditional linear models that assume normally distributed residuals, GLMM can handle various types of distributions for the response variable (e.g., binomial for binary data, Poisson for count data, etc.), which is essential for modeling the positive integer nature of stress scores. In Section 1.3.2, we found that the Stress Scores of nurses we want to fit are positive integers (count data, not continuous data).
 
 -   Hierarchical Structure and Longitudinal Data: A nested structure with multiple levels (Repeated measures within nurses, nurses within hospitals)
 
@@ -345,7 +345,7 @@ According to fit the model, I choose Generalized Linear Mixed Model (GLMM), the 
 
 ## 2.3 Decompose variance
 
-Decomposing variance in a multilevel model involves quantifying how much of the total variability in the outcome is attributable to differences at each level of the hierarchy.
+Decomposing variance in a multilevel model involves quantifying how much of the total variability in the outcome is attributable to differences at each level of the hierarchy. One key measure used in this context is the Intraclass Correlation Coefficient (ICC), which provides an estimate of the proportion of the total variance that is due to the grouping structure.
 
 # Part 3 Analysis
 
@@ -366,3 +366,5 @@ text_stats()
 
 ::: {#refs}
 :::
+
+# Appendix
