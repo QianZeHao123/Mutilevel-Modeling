@@ -86,7 +86,7 @@ The MST dataset encompasses data from a longitudinal multisite trial assessing a
 
 ### 1.2.2 Identify the variables at each level
 
-![Variables at each level](Pic/variables at each level.png)
+![Variables at each level](Pic/variables%20at%20each%20level.png)
 
 **Considerations for "Size" Placement**: It is no longer true that other variables are identified as different hierarchies. However, it is worth discussing whether the Size is placed on the Nurse level or the Hospital level. Based on my observations of the Hospital and Size columns in the dataset, there is only one possible Size value for each hospital. For the study's focus on the intervention's impact on stress responses, placing Size at Level 3 is generally more suitable. This approach recognizes department size as a contextual factor at the hospital level that may influence the stress-coping intervention's effectiveness across different settings. It allows the study to explore how the broader environmental and organizational context, such as the scale of A&E departments, moderates the treatment outcomes, providing insights into adapting the intervention for varied hospital environments to enhance its efficacy.
 
@@ -102,6 +102,7 @@ The study aims to determine whether the experimental intervention, a stress-copi
 # Check if there are any missing values in the entire dataset
 any_na <- any(is.na(MST))
 print(paste("Are there any missing values in the dataset? ", any_na))
+remove(any_na)
 ```
 
 ### 1.3.2 **Summary Statistics**
@@ -115,6 +116,9 @@ summary(MST$Responset3)
 ```
 
 ```{r}
+# Load the necessary libraries
+library(gridExtra)
+
 # Frequency counts for categorical variables
 # Bar chart for Treatment Groups
 bar.Trt <- ggplot(data = MST, aes(factor(Trt))) +
@@ -138,14 +142,13 @@ bar.Hospital <- ggplot(data = MST, aes(factor(Hospital))) +
 
 
 grid.arrange(bar.Trt, bar.Gender, bar.Size, bar.Hospital, ncol = 2)
+
+remove(bar.Trt, bar.Gender, bar.Size, bar.Hospital)
 ```
 
 ### 1.3.3 **Distribution Analysis**
 
 ```{r warning=FALSE}
-# Load the necessary libraries
-library(gridExtra)
-
 # List of variable names to plot
 variables_to_plot <-
   c("Experience", "Responset1", "Responset2", "Responset3")
@@ -184,7 +187,7 @@ grid.arrange(grobs = hist_plots, ncol = 2)
 # Arrange the box plots in a 4-graph plot
 grid.arrange(grobs = box_plots, ncol = 2)
 
-remove(hist_plots, box_plots)
+remove(hist_plots, box_plots, variables_to_plot, i, var)
 ```
 
 ### 1.3.4 Correlations
@@ -192,7 +195,7 @@ remove(hist_plots, box_plots)
 ```{r message=FALSE}
 # Correlation between two varibales with GGpairs
 library("GGally")
-ggpairs(MST)+theme_bw()
+# ggpairs(MST)+theme_bw()
 ```
 
 ### 1.3.5 **Treatment and Control Group Comparison**
@@ -259,7 +262,8 @@ ggplot(MST_long,
     color = "Group"
   ) +
   theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5))  # Center the plot title
+  # Center the plot title
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 ### 1.3.7 **Categorical Variable Analysis**
