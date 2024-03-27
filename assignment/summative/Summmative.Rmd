@@ -98,30 +98,46 @@ The study aims to determine whether the experimental intervention, a stress-copi
 
 ### 1.3.1 Check missing values and imputation
 
+```{r}
+# Check if there are any missing values in the entire dataset
+any_na <- any(is.na(MST))
+print(paste("Are there any missing values in the dataset? ", any_na))
+```
+
 ### 1.3.2 **Summary Statistics**
 
 ```{r}
 # Summary statistics for continuous variables
-cat('----Experience-------------------------------------- \n')
 summary(MST$Experience)
-cat('----Responset1-------------------------------------- \n')
 summary(MST$Responset1)
-cat('----Responset2-------------------------------------- \n')
 summary(MST$Responset2)
-cat('----Responset3-------------------------------------- \n')
 summary(MST$Responset3)
 ```
 
 ```{r}
 # Frequency counts for categorical variables
-cat('----Trt--------------------------------------------- \n')
-table(MST$Trt)
-cat('----Gender------------------------------------------ \n')
-table(MST$Gender)
-cat('----Size-------------------------------------------- \n')
-table(MST$Size)
-cat('----Hospital---------------------------------------- \n')
-table(MST$Hospital)
+# Bar chart for Treatment Groups
+bar.Trt <- ggplot(data = MST, aes(factor(Trt))) +
+  geom_bar(fill="lightblue") +
+  labs(x="Treatment Group", y="Count", title="Treatment Group Distribution")
+
+# Bar chart for Gender
+bar.Gender <- ggplot(data = MST, aes(factor(Gender))) +
+  geom_bar(fill="green") +
+  labs(x="Gender", y="Count", title="Gender Distribution")
+
+# Bar chart for Department Size
+bar.Size <- ggplot(data = MST, aes(factor(Size))) +
+  geom_bar(fill="pink") +
+  labs(x="Department Size", y="Count", title="A&E Department Size Distribution")
+
+# Bar chart for Hospital
+bar.Hospital <- ggplot(data = MST, aes(factor(Hospital))) +
+  geom_bar(fill="gray") +
+  labs(x="Hospital", y="Count", title="Hospital Distribution")
+
+
+grid.arrange(bar.Trt, bar.Gender, bar.Size, bar.Hospital, ncol = 2)
 ```
 
 ### 1.3.3 **Distribution Analysis**
@@ -167,6 +183,8 @@ grid.arrange(grobs = hist_plots, ncol = 2)
 
 # Arrange the box plots in a 4-graph plot
 grid.arrange(grobs = box_plots, ncol = 2)
+
+remove(hist_plots, box_plots)
 ```
 
 ### 1.3.4 Correlations
@@ -175,6 +193,94 @@ grid.arrange(grobs = box_plots, ncol = 2)
 # Correlation between two varibales with GGpairs
 library("GGally")
 ggpairs(MST)+theme_bw()
+```
+
+### 1.3.5 **Treatment and Control Group Comparison**
+
+```{r warning=FALSE}
+# Reshape data to "long format" for easier plotting
+library(tidyr)
+MST_long <-
+  pivot_longer(
+    MST,
+    cols = starts_with("Responset"),
+    names_to = "TimeStamp",
+    values_to = "StressScore"
+  )
+
+# Convert TimeStamp to a factor for ordered plotting
+MST_long$TimeStamp <-
+  factor(MST_long$TimeStamp,
+         levels = c("Responset1", "Responset2", "Responset3"))
+```
+
+```{r}
+# Create a bar plot comparing treatment and control groups over time
+ggplot(MST_long, aes(x = TimeStamp, y = StressScore, fill = factor(Trt))) +
+  geom_bar(
+    stat = "summary",
+    fun = "mean",
+    position = "dodge",
+    width = 0.7
+  ) +
+  scale_fill_manual(
+    values = c("#0F9999", "#9999FF"),
+    labels = c("Control", "Treatment")
+  ) +
+  labs(title = "Comparison of Treatment and Control Groups Over Time",
+       x = "TimeStamp",
+       y = "Mean Stress Score",
+       fill = "Group") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))  # Center the plot title
+```
+
+### 1.3.6 **Temporal Trends**
+
+```{r message=FALSE, warning=FALSE}
+# Plotting temporal trends
+ggplot(MST_long,
+       aes(
+         x = TimeStamp,
+         y = StressScore,
+         group = Trt,
+         color = factor(Trt)
+       )) +
+  geom_line(stat = "summary", fun.y = "mean") +
+  geom_point(stat = "summary", fun.y = "mean", size = 3) +
+  scale_color_manual(
+    values = c("#60F999", "#123456"),
+    labels = c("Control", "Treatment")
+  ) +
+  labs(
+    title = "Temporal Trends in Stress Scores",
+    x = "TimeStamp",
+    y = "Mean Stress Score",
+    color = "Group"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))  # Center the plot title
+```
+
+### 1.3.7 **Categorical Variable Analysis**
+
+```{r}
+# Scatterplot of Experience vs. StressScore, colored by Treatment Group
+ggplot(MST_long, aes(x = Experience, y = StressScore, color = factor(Trt))) +
+  geom_point(alpha = 0.6) +
+  scale_color_manual(
+    values = c("orange", "purple"),
+    labels = c("Control", "Treatment")
+  ) +
+  facet_wrap( ~ TimeStamp) +  # Optional: To separate plots by time points
+  labs(
+    title = "Experience vs. Stress Score by Treatment Group",
+    x = "Experience (Years)",
+    y = "Stress Score",
+    color = "Group"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))  # Center the plot title
 ```
 
 # Part 2 Methods
