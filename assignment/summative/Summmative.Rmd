@@ -47,6 +47,8 @@ Multisite trials offer enhanced generalizability and statistical power due to th
 
 ## 1.2 Intro to the MST Dataset
 
+### 1.2.1 Read the Dataset
+
 ```{r warning=FALSE,message=FALSE}
 # --------------------------------------------------------
 ## clear the environment var area
@@ -74,13 +76,100 @@ Download the dataset "MST" only once from GitHub and save it to csv files.
 #   )
 # write.csv(MST, "MST.csv")
 MST = read.csv("./MST.csv")
+dim(MST)
 head(MST)
-# dim(MST)
 ## Show three line table MST with sjPlot::tab_df
 # tab_df(MST[1:5, ])
 ```
 
+The MST dataset encompasses data from a longitudinal multisite trial assessing a stress-coping training program's effectiveness for nurses in 20 hospitals' Accident and Emergency (A&E) departments. It comprises 200 entries across 9 columns, detailing anonymized nurse identifiers (ID), hospital IDs, treatment assignment (Trt) with 0 indicating control and 1 indicating receipt of the training program, nurse experience in years, gender (0 for male, 1 for female), and A&E department size (0 for small, 1 for large). The dataset tracks the program's impact on job-related stress through post-test stress scores (Responset1, Responset2, Responset3) measured at 1, 2, and 3 months post-training, respectively, on a scale from 0 (no stress) to 100 (maximum stress), providing a multifaceted view of the intervention's short-term effects on nurse stress levels across diverse hospital settings.
+
+### 1.2.2 Identify the variables at each level
+
+![Variables at each level](Pic/variables at each level.png)
+
+**Considerations for "Size" Placement**: It is no longer true that other variables are identified as different hierarchies. However, it is worth discussing whether the Size is placed on the Nurse level or the Hospital level. Based on my observations of the Hospital and Size columns in the dataset, there is only one possible Size value for each hospital. For the study's focus on the intervention's impact on stress responses, placing Size at Level 3 is generally more suitable. This approach recognizes department size as a contextual factor at the hospital level that may influence the stress-coping intervention's effectiveness across different settings. It allows the study to explore how the broader environmental and organizational context, such as the scale of A&E departments, moderates the treatment outcomes, providing insights into adapting the intervention for varied hospital environments to enhance its efficacy.
+
+### 1.2.3 Aims of Multilevel Modeling
+
+The study aims to determine whether the experimental intervention, a stress-coping training program, significantly reduces job-related stress among nurses in A&E departments post-test. Additionally, it seeks to explore how the intervention's impact on stress levels changes over time, providing insights into the sustainability and temporal dynamics of the program's effectiveness.
+
 ## 1.3 Exploratory Data Analysis
+
+### 1.3.1 Check missing values and imputation
+
+### 1.3.2 **Summary Statistics**
+
+```{r}
+# Summary statistics for continuous variables
+cat('----Experience-------------------------------------- \n')
+summary(MST$Experience)
+cat('----Responset1-------------------------------------- \n')
+summary(MST$Responset1)
+cat('----Responset2-------------------------------------- \n')
+summary(MST$Responset2)
+cat('----Responset3-------------------------------------- \n')
+summary(MST$Responset3)
+```
+
+```{r}
+# Frequency counts for categorical variables
+cat('----Trt--------------------------------------------- \n')
+table(MST$Trt)
+cat('----Gender------------------------------------------ \n')
+table(MST$Gender)
+cat('----Size-------------------------------------------- \n')
+table(MST$Size)
+cat('----Hospital---------------------------------------- \n')
+table(MST$Hospital)
+```
+
+### 1.3.3 **Distribution Analysis**
+
+```{r warning=FALSE}
+# Load the necessary libraries
+library(gridExtra)
+
+# List of variable names to plot
+variables_to_plot <-
+  c("Experience", "Responset1", "Responset2", "Responset3")
+
+# Initialize lists to store the plots
+hist_plots <- list()
+box_plots <- list()
+
+# Loop through each variable and create histograms and box plots
+for (i in 1:length(variables_to_plot)) {
+  var <- variables_to_plot[i]
+  
+  # Histogram with Density Plot
+  hist_plots[[i]] <- ggplot(MST, aes_string(x = var)) +
+    geom_histogram(
+      aes(y = ..density..),
+      binwidth = 1,
+      color = "black",
+      fill = "skyblue"
+    ) +
+    geom_density(alpha = .2, fill = "#FF6666") +
+    ggtitle(paste("Distribution of", var)) +
+    xlab(var) +
+    ylab("Density")
+  
+  # Box Plot
+  box_plots[[i]] <- ggplot(MST, aes_string(y = var)) +
+    geom_boxplot(fill = "lightblue") +
+    ggtitle(paste("Box Plot of", var)) +
+    ylab(var)
+}
+
+# Arrange the histograms in a 4-graph plot
+grid.arrange(grobs = hist_plots, ncol = 2)
+
+# Arrange the box plots in a 4-graph plot
+grid.arrange(grobs = box_plots, ncol = 2)
+```
+
+### 1.3.4 Correlations
 
 ```{r message=FALSE}
 # Correlation between two varibales with GGpairs
