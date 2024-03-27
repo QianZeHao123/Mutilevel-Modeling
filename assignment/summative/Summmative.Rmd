@@ -74,8 +74,8 @@ Download the dataset "MST" only once from GitHub and save it to csv files.
 #     "https://andygolightly.github.io/teaching/MATH43515/summative/andy.csv",
 #     header = TRUE
 #   )
-# write.csv(MST, "MST.csv")
-MST = read.csv("./MST.csv")
+# write.csv(MST, "./Data/MST.csv")
+MST = read.csv("./Data/MST.csv")
 dim(MST)
 head(MST)
 ## Show three line table MST with sjPlot::tab_df
@@ -192,15 +192,25 @@ remove(hist_plots, box_plots, variables_to_plot, i, var)
 
 ### 1.3.4 Correlations
 
+Calculate the correlations between every two variables ($X$ and $Y$) with the Pearson correlation coefficient:
+
+$$
+ r = \frac{\sum_{i=1}^{n} (X_i - \bar{X})(Y_i - \bar{Y})}{\sqrt{\sum_{i=1}^{n} (X_i - \bar{X})^2} \sqrt{\sum_{i=1}^{n} (Y_i - \bar{Y})^2}}
+$$
+
 ```{r message=FALSE}
 # Correlation between two varibales with GGpairs
 library("GGally")
-# ggpairs(MST)+theme_bw()
+ggpairs(MST[, c("Experience", "Responset1",
+                "Responset2", "Responset3")]) +
+  theme_bw()
 ```
 
 ### 1.3.5 **Treatment and Control Group Comparison**
 
-```{r warning=FALSE}
+In Section 1.3.5-13.7, I focus on the Intervention. For easier making the graphs, I change the dataset into **long format**.
+
+```{r message=FALSE, warning=FALSE}
 # Reshape data to "long format" for easier plotting
 library(tidyr)
 MST_long <-
@@ -219,7 +229,8 @@ MST_long$TimeStamp <-
 
 ```{r}
 # Create a bar plot comparing treatment and control groups over time
-ggplot(MST_long, aes(x = TimeStamp, y = StressScore, fill = factor(Trt))) +
+ggplot(MST_long, aes(x = TimeStamp, y = StressScore,
+                     fill = factor(Trt))) +
   geom_bar(
     stat = "summary",
     fun = "mean",
@@ -235,7 +246,8 @@ ggplot(MST_long, aes(x = TimeStamp, y = StressScore, fill = factor(Trt))) +
        y = "Mean Stress Score",
        fill = "Group") +
   theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5))  # Center the plot title
+  # Center the plot title
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 ### 1.3.6 **Temporal Trends**
@@ -276,7 +288,8 @@ ggplot(MST_long, aes(x = Experience, y = StressScore, color = factor(Trt))) +
     values = c("orange", "purple"),
     labels = c("Control", "Treatment")
   ) +
-  facet_wrap( ~ TimeStamp) +  # Optional: To separate plots by time points
+  # Optional: To separate plots by time points
+  facet_wrap( ~ TimeStamp) +
   labs(
     title = "Experience vs. Stress Score by Treatment Group",
     x = "Experience (Years)",
@@ -284,10 +297,55 @@ ggplot(MST_long, aes(x = Experience, y = StressScore, color = factor(Trt))) +
     color = "Group"
   ) +
   theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5))  # Center the plot title
+  # Center the plot title
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+# Create box plots
+boxplot_stress <-
+  ggplot(MST_long, aes(x = TimeStamp, y = StressScore, fill = factor(Trt))) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("skyblue", "salmon"),
+                    labels = c("Control", "Treatment")) +
+  labs(title = "Stress Scores by Timepoint and Treatment Group",
+       x = "TimeStamp",
+       y = "Stress Score",
+       fill = "Group") +
+  theme_minimal()
+
+# Display the plot
+print(boxplot_stress)
+remove(boxplot_stress)
 ```
 
 # Part 2 Methods
+
+## 2.1 Multilevel models for MST Dataset
+
+### 2.1.1 **Multilevel Models Overview**
+
+Multilevel models, also known as hierarchical linear models or mixed-effects models, are a class of statistical models designed to analyze data with a nested or hierarchical structure. These models are particularly relevant for datasets where observations are grouped at more than one level, such as our case, repeated stress measurements within nurses who are, in turn, nested within hospitals.
+
+### 2.1.2 Relevant for the modelling of this data set
+
+![Hierarchical Data Structure](Pic/hierarchical%20structure.png)
+
+Multilevel models (MLMs) are crucial for analyzing the MST dataset's hierarchical structure, effectively addressing the correlations within grouped data. By acknowledging the nesting of measurements within individuals and hospitals, MLMs prevent the underestimation of standard errors that could lead to incorrect significance claims. They meticulously partition variance to reveal the sources influencing outcomes, integrating both fixed effects, such as the overall intervention impact, and random effects that capture variability at individual and group levels. This approach enables a comprehensive assessment of interventions in varied contexts. Overlooking the dataset's hierarchical nature risks missing key insights and making inaccurate conclusions, particularly regarding how group characteristics like hospital policies may affect results. Therefore, MLMs are indispensable for ensuring the robustness and relevance of findings in nested data analyses.
+
+## 2.2 Generalized Linear Mixed Model for MLM
+
+According to fit the model, I choose Generalized Linear Mixed Model (GLMM), the reasons are shown below:
+
+-   Limitation of Traditional Linear Model: Unlike traditional linear models that assume normally distributed residuals, GLMMs can handle various types of distributions for the response variable (e.g., binomial for binary data, Poisson for count data, etc.), which is essential for modeling the positive integer nature of stress scores. In Section 1.3.2, we found that the Stress Scores of nurses we want to fit are positive integers (count data, not continuous data).
+
+-   Hierarchical Structure and Longitudinal Data: A nested structure with multiple levels (Repeated measures within nurses, nurses within hospitals)
+
+-   Allows for Fixed and Random Effects: Fixed effects (e.g., treatment or intervention, time points) capture population-level effects that are consistent across all observations, while random effects account for variations at the group level (e.g., differences among nurses or hospitals) that might affect the response variable.
+
+## 2.3 Decompose variance
+
+Decomposing variance in a multilevel model involves quantifying how much of the total variability in the outcome is attributable to differences at each level of the hierarchy.
 
 # Part 3 Analysis
 
