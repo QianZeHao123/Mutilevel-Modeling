@@ -59,7 +59,10 @@ Download the file childweight.RData from Ultra and place it into your working di
 # data <- childweight
 #Or uncomment the following if there are issues loading the workspace
 data <- read.csv("https://andygolightly.github.io/teaching/MATH43515/childweight.csv")[,-1]
+data.origin = data
+```
 
+```{r}
 weight <- data$weight
 age <- data$age
 birthw <- data$brthwt

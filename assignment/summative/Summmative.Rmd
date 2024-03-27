@@ -3,7 +3,7 @@ title: "Multilevel Modeling Summative"
 author: "Anonymous Marking Code: Z0195806"
 date: "`r Sys.Date()`"
 output:
-  pdf_document: 
+  pdf_document:
     latex_engine: xelatex
     toc: true
 bibliography: references.bib
@@ -13,11 +13,37 @@ bibliography: references.bib
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+------------------------------------------------------------------------
+
 # Part 1 Introduction
 
 ## 1.1 Background of Multisite Trials
 
-**Definition of Multisite Trials**: Multisite trials are a type of clinical research study where the intervention being tested is administered across multiple sites or locations. These trials are particularly valuable in assessing the effectiveness of an intervention in a broader, more diverse population. By including a variety of settings, such as different hospitals, clinics, or communities, multisite trials can provide more generalizable results, ensuring that the findings are not specific to a single location or population [@YouthEndowmentFund2024].
+### 1.1.1 Definition of Multisite Trials
+
+Multisite trials are a type of clinical research study where the intervention being tested is administered across multiple sites or locations. These trials are particularly valuable in assessing the effectiveness of an intervention in a broader, more diverse population. By including a variety of settings, such as different hospitals, clinics, or communities, multisite trials can provide more generalizable results, ensuring that the findings are not specific to a single location or population [@YouthEndowmentFund2024].
+
+### 1.1.2 Relevance for assessing the effectiveness of an intervention
+
+1.  **Generalizability**: Multisite trials enhance the external validity of the study findings. By testing the intervention across various demographic and geographic settings, the results are more likely to be applicable to a wider population.
+
+2.  **Variability and Robustness**: These trials capture the variability across different sites, which can include differences in implementation, participant characteristics, and contextual factors. This variability helps in assessing the robustness of the intervention's effectiveness.
+
+3.  **Standardization vs. Adaptation**: Multisite trials can explore the balance between the standardization of the intervention (to ensure fidelity) and its adaptation to different settings (to ensure relevance). This balance is crucial for interventions that aim to be scaled up or replicated in diverse contexts.
+
+4.  **Statistical Power**: Conducting a trial across multiple sites often allows for a larger sample size, which increases the statistical power of the study. This is particularly important for detecting small to moderate effects of interventions.
+
+5.  **Complex Interventions**: Many interventions, especially in healthcare, are complex and multifaceted. Multisite trials can provide insights into how different components of the intervention perform across various settings.
+
+6.  **Healthcare System Insights**: For interventions implemented in healthcare settings, multisite trials can offer valuable insights into how different healthcare systems or practices impact the effectiveness of the intervention.
+
+### 1.1.3 Bias of Multisite Trials
+
+Multisite trials enhance the relevance of findings but face challenges like selection bias, variability in implementation, and contextual influences, which can skew results. Mitigating these requires careful site selection, standardization across sites, and statistical techniques like multilevel modeling to ensure the trials' findings are both robust and widely applicable.
+
+### 1.1.4 Pros and Cons of Multisite Trials
+
+Multisite trials offer enhanced generalizability and statistical power due to their diverse and large participant pools, and can be more resource-efficient through shared infrastructure. However, they also face challenges such as logistical complexities, variability in intervention implementation, regulatory hurdles, potential site-specific biases, and data integration issues. Balancing these pros and cons requires careful planning, standardization of protocols, and sophisticated statistical methods to ensure the reliability and applicability of the findings across varied settings [@Mudaranthakam2021].
 
 ## 1.2 Intro to the MST Dataset
 
@@ -54,9 +80,7 @@ head(MST)
 # tab_df(MST[1:5, ])
 ```
 
-```{r}
-library(ggplot2)
-```
+## 1.3 Exploratory Data Analysis
 
 ```{r message=FALSE}
 # Correlation between two varibales with GGpairs
@@ -82,3 +106,6 @@ text_stats()
 ```
 
 # References
+
+::: {#refs}
+:::
