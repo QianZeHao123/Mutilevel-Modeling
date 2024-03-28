@@ -337,7 +337,7 @@ Multilevel models (MLMs) are crucial for analyzing the MST dataset's hierarchica
 
 According to fit the model, I choose Generalized Linear Mixed Model (GLMM), the reasons are shown below:
 
--   Limitation of Traditional Linear Model: Unlike traditional linear models that assume normally distributed residuals, GLMM can handle various types of distributions for the response variable (e.g., binomial for binary data, Poisson for count data, etc.), which is essential for modeling the positive integer nature of stress scores. In Section 1.3.2, we found that the Stress Scores of nurses we want to fit are positive integers (count data, not continuous data).
+-   Limitation of Traditional Linear Model: Unlike traditional linear models that assume normally distributed residuals, GLMM can handle various types of distributions for the response variable (Poisson for count data, etc.), which is essential for modeling the positive integer nature of stress scores. In Section 1.3.2, we found that the Stress Scores of nurses we want to fit are positive integers (count data, not continuous data).
 
 -   Hierarchical Structure and Longitudinal Data: A nested structure with multiple levels (Repeated measures within nurses, nurses within hospitals)
 
@@ -345,9 +345,79 @@ According to fit the model, I choose Generalized Linear Mixed Model (GLMM), the 
 
 ## 2.3 Decompose variance
 
-Decomposing variance in a multilevel model involves quantifying how much of the total variability in the outcome is attributable to differences at each level of the hierarchy. One key measure used in this context is the Intraclass Correlation Coefficient (ICC), which provides an estimate of the proportion of the total variance that is due to the grouping structure.
+Decomposing variance in a multilevel model involves quantifying how much of the total variability in the outcome is attributable to differences at each level of the hierarchy. One key measure used in this context is the Intra-class Correlation Coefficient (ICC), which provides an estimate of the proportion of the total variance that is due to the grouping structure.
+
+**Steps for Decompose variance**
+
+1.  Using the MST_long (long format) to fit an empty GLMM
+
+    ```{r}
+    MST_long$ID <- as.factor(MST_long$ID)
+
+    ## Empty model with longitudinal data
+    init_model_long <- glmer(
+      StressScore ~ Trt + as.numeric(TimeStamp) + (1 | Hospital:ID) + (1 | Hospital),
+      data = MST_long,
+      family = gaussian(link = "identity")
+      # family = poisson(link = "log")
+    )
+    # empty_model_long <- glmer(
+    #   StressScore ~ 1 + (1 | Hospital),
+    #   data = MST_long,
+    #   family = poisson(link = "log")
+    # )
+    summary(init_model_long)
+    ```
+
+    ```{r}
+    empty_model_long.2 <- glmer(
+      StressScore ~ Trt + Trt:TimeStamp + TimeStamp + (1 | Hospital:ID) + (1 | Hospital),
+      data = MST_long,
+      family = gaussian(link = "identity")
+      # family = poisson(link = "log")
+    )
+
+    empty_model_long.3 <- glmer(
+      StressScore ~  Trt*TimeStamp + (1 | Hospital:ID) + (1 | Hospital),
+      data = MST_long,
+      family = gaussian(link = "identity")
+      # family = poisson(link = "log")
+    )
+
+    empty_model_long.4 <- glmer(
+      StressScore ~  Trt*TimeStamp + c(Trt*Trt) + (1 | Hospital:ID) + (1 | Hospital),
+      data = MST_long,
+      family = gaussian(link = "identity")
+      # family = poisson(link = "log")
+    )
+
+
+    ```
+
+    ```{r}
+    summary(empty_model_long.2)
+    ```
+
+    ```{r}
+    summary(empty_model_long.3)
+    ```
+
+2.  empty_model_long.1 \<- glmer( StressScore \~ Trt + Trt:TimeStamp + (1 \| Hospital:ID) + (1 \| Hospital), data = MST_long, family = gaussian(link = "identity") \# family = poisson(link = "log") )Decompose Variance
+
+```{r}
+MST_long_new = MST_long
+MST_long_new$TimeStamp_new = as.numeric(MST_long_new$TimeStamp)
+```
+
+```{r}
+MST_long_new
+```
 
 # Part 3 Analysis
+
+ICC -\> 3-level
+
+Init model
 
 # Part 4 Discussion of results
 
@@ -368,3 +438,45 @@ text_stats()
 :::
 
 # Appendix
+
+```{r}
+MST_long_new$ID <- as.factor(MST_long$ID)
+MST_long_new$Hospital <- as.factor(MST_long$Hospital)
+MST_long_new$Time = as.numeric(MST_long$TimeStamp)
+
+model <- glmer(
+  StressScore ~ Trt + Time + Experience + Size + (Gender | Hospital:ID) + (1 | Hospital),
+  data = MST_long_new,
+  family = gaussian(link = "identity")
+)
+
+summary(model)
+```
+
+```{r}
+MST_long_new$Pred = predict(model)
+```
+
+```{r}
+ggplot(MST_long_new, aes(Experience, StressScore)) +
+  geom_point(aes(Experience, StressScore, col=TimeStamp)) +
+  geom_line(aes(x=Experience, y=Pred, group=TimeStamp, col=TimeStamp))
+```
+
+```{r}
+MST_long_new$Trt.f = as.factor(MST_long_new$Trt)
+ggplot(MST_long_new, aes(Experience, StressScore)) +
+  geom_point(aes(Experience, StressScore, col=Trt.f)) +
+  geom_line(aes(y=Pred, group=Trt.f, col=Trt.f)) +
+  theme(legend.position = "none")
+```
+
+![](http://127.0.0.1:15441/chunk_output/s/726218B8/ch7wyo1ti9wp4/00001a.png)
+
+```{r}
+MST_long_new$Trt.f = as.factor(MST_long_new$Trt)
+ggplot(MST_long_new, aes(Experience, StressScore)) +
+  geom_point(aes(Experience, StressScore, col=Trt.f)) +
+  geom_line(aes(y=Pred, group=Trt.f, col=Trt.f)) +
+  theme(legend.position = "none")
+```
