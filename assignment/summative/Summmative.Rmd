@@ -49,6 +49,10 @@ Multisite trials offer enhanced generalizability and statistical power due to th
 
 ### 1.2.1 Read the Dataset
 
+```{r}
+source("CleanEnv.R")
+```
+
 ```{r warning=FALSE,message=FALSE}
 # --------------------------------------------------------
 ## clear the environment var area
@@ -69,12 +73,14 @@ require(sjPlot)
 Download the dataset "MST" only once from GitHub and save it to csv files.
 
 ```{r}
+# ----Download the Data --------------------------------
 # MST <-
 #   read.csv(
 #     "https://andygolightly.github.io/teaching/MATH43515/summative/andy.csv",
 #     header = TRUE
 #   )
-# write.csv(MST, "./Data/MST.csv")
+# write.csv(MST, "./Data/MST.csv", row.names = FALSE)
+# ------------------------------------------------------
 MST = read.csv("./Data/MST.csv")
 dim(MST)
 head(MST)
@@ -301,6 +307,12 @@ ggplot(MST_long, aes(x = Experience, y = StressScore, color = factor(Trt))) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
+### 1.3.8 The Normal Distribution Diagnostics of
+
+```{r}
+
+```
+
 ```{r}
 # Create box plots
 boxplot_stress <-
@@ -317,6 +329,26 @@ boxplot_stress <-
 # Display the plot
 print(boxplot_stress)
 remove(boxplot_stress)
+```
+
+## 1.4 Convert the Numeric Data into Factors
+
+Factors explicitly inform the statistical model that the data is categorical, not continuous, such as Hospital, ID, Trt, Gender (male or female), Size (small or large). Their original data structure is integer, I convert them into factor with tidyverse below (in addition, TimeStamp is a string, but our study focus on the treatment impact evolving over time, so I change them into integer as 1, 2 and 3):
+
+```{r warning=FALSE}
+library(dplyr)
+
+MST_long = MST_long %>%
+  mutate(
+    Trt.f = as.factor(Trt),
+    Gender.f = as.factor(Gender),
+    Hospital.f = as.factor(Hospital),
+    ID.f = as.factor(ID),
+    Time = as.numeric(TimeStamp),
+    Size.f = as.factor(Size)
+  )
+
+head(MST_long)
 ```
 
 # Part 2 Methods
@@ -351,73 +383,53 @@ Decomposing variance in a multilevel model involves quantifying how much of the 
 
 1.  Using the MST_long (long format) to fit an empty GLMM
 
-    ```{r}
-    MST_long$ID <- as.factor(MST_long$ID)
-
-    ## Empty model with longitudinal data
-    init_model_long <- glmer(
-      StressScore ~ Trt + as.numeric(TimeStamp) + (1 | Hospital:ID) + (1 | Hospital),
-      data = MST_long,
-      family = gaussian(link = "identity")
-      # family = poisson(link = "log")
-    )
-    # empty_model_long <- glmer(
-    #   StressScore ~ 1 + (1 | Hospital),
-    #   data = MST_long,
-    #   family = poisson(link = "log")
-    # )
-    summary(init_model_long)
-    ```
-
-    ```{r}
-    empty_model_long.2 <- glmer(
-      StressScore ~ Trt + Trt:TimeStamp + TimeStamp + (1 | Hospital:ID) + (1 | Hospital),
-      data = MST_long,
-      family = gaussian(link = "identity")
-      # family = poisson(link = "log")
-    )
-
-    empty_model_long.3 <- glmer(
-      StressScore ~  Trt*TimeStamp + (1 | Hospital:ID) + (1 | Hospital),
-      data = MST_long,
-      family = gaussian(link = "identity")
-      # family = poisson(link = "log")
-    )
-
-    empty_model_long.4 <- glmer(
-      StressScore ~  Trt*TimeStamp + c(Trt*Trt) + (1 | Hospital:ID) + (1 | Hospital),
-      data = MST_long,
-      family = gaussian(link = "identity")
-      # family = poisson(link = "log")
-    )
-
-
-    ```
-
-    ```{r}
-    summary(empty_model_long.2)
-    ```
-
-    ```{r}
-    summary(empty_model_long.3)
-    ```
-
-2.  empty_model_long.1 \<- glmer( StressScore \~ Trt + Trt:TimeStamp + (1 \| Hospital:ID) + (1 \| Hospital), data = MST_long, family = gaussian(link = "identity") \# family = poisson(link = "log") )Decompose Variance
-
-```{r}
-MST_long_new = MST_long
-MST_long_new$TimeStamp_new = as.numeric(MST_long_new$TimeStamp)
-```
-
-```{r}
-MST_long_new
-```
+2.  Calculate the VPC
 
 # Part 3 Analysis
 
-ICC -\> 3-level
+## 3.1 Determine the level of Model
 
-Init model
+### 3.1.1 Build an empty GLMM with Random Effects
+
+```{r}
+MST_long$ID <- as.factor(MST_long$ID)
+
+## Empty model with longitudinal data
+Model.0 <- glmer(
+  StressScore ~ Trt.f * Time + (1 | Hospital) + (1 | Hospital:ID),
+  data = MST_long,
+  family = gaussian(link = "identity")
+)
+```
+
+The warning above is said when using **glmer(family=gaussian)** is same to **lmer()**. So the code bellowing I will use **lmer()** instead.
+
+### 3.1.2 Calculate the VPC
+
+```{r}
+REsummary <- as.data.frame(VarCorr(Model.0))
+REsummary
+```
+
+```{r}
+# Residual variance
+sig <- REsummary$vcov[3]
+# RE variance for Hospital
+sigv <- REsummary$vcov[2]
+# RE variance for ID:Hospital
+sigu <- REsummary$vcov[1]
+# total variance
+totalvar <- sum(REsummary$vcov)
+vpc.Hospital <- sigv / totalvar
+vpc.ID <- sigu / totalvar
+```
+
+### 3.1.3 Calculate the ICC
+
+```{r}
+icc.Hospital <- sigv / totalvar
+icc.ID <- (sigu + sigv) / totalvar
+```
 
 # Part 4 Discussion of results
 
@@ -438,6 +450,8 @@ text_stats()
 :::
 
 # Appendix
+
+## Appendix 1: Add/Del Variables in the model
 
 ```{r}
 MST_long_new$ID <- as.factor(MST_long$ID)
@@ -462,16 +476,6 @@ ggplot(MST_long_new, aes(Experience, StressScore)) +
   geom_point(aes(Experience, StressScore, col=TimeStamp)) +
   geom_line(aes(x=Experience, y=Pred, group=TimeStamp, col=TimeStamp))
 ```
-
-```{r}
-MST_long_new$Trt.f = as.factor(MST_long_new$Trt)
-ggplot(MST_long_new, aes(Experience, StressScore)) +
-  geom_point(aes(Experience, StressScore, col=Trt.f)) +
-  geom_line(aes(y=Pred, group=Trt.f, col=Trt.f)) +
-  theme(legend.position = "none")
-```
-
-![](http://127.0.0.1:15441/chunk_output/s/726218B8/ch7wyo1ti9wp4/00001a.png)
 
 ```{r}
 MST_long_new$Trt.f = as.factor(MST_long_new$Trt)
