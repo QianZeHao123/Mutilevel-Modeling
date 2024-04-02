@@ -307,12 +307,6 @@ ggplot(MST_long, aes(x = Experience, y = StressScore, color = factor(Trt))) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-### 1.3.8 The Normal Distribution Diagnostics of
-
-```{r}
-
-```
-
 ```{r}
 # Create box plots
 boxplot_stress <-
@@ -335,7 +329,7 @@ remove(boxplot_stress)
 
 Factors explicitly inform the statistical model that the data is categorical, not continuous, such as Hospital, ID, Trt, Gender (male or female), Size (small or large). Their original data structure is integer, I convert them into factor with tidyverse below (in addition, TimeStamp is a string, but our study focus on the treatment impact evolving over time, so I change them into integer as 1, 2 and 3):
 
-```{r warning=FALSE}
+```{r message=FALSE, warning=FALSE}
 library(dplyr)
 
 MST_long = MST_long %>%
@@ -350,6 +344,26 @@ MST_long = MST_long %>%
 
 head(MST_long)
 ```
+
+## 1.5 The Distribution of StressScore
+
+```{r}
+MST_long %>%
+  ggplot(aes(sample = StressScore)) +
+  geom_qq() +
+  geom_qq_line() +
+  labs(title = "Q-Q Plot of StressScore",
+       x = "Quantile",
+       y = "Stress Score"
+       )
+```
+
+```{r}
+# Shapiro-Wilk Test (Statistical Test)
+shapiro.test(MST_long$StressScore)
+```
+
+The Shapiro-Wilk test is a common test for normality. P-value is less than 0.05, which indicates that we can think of the distribution of the StressScore as a Gaussian distribution.
 
 # Part 2 Methods
 
