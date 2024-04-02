@@ -49,10 +49,6 @@ Multisite trials offer enhanced generalizability and statistical power due to th
 
 ### 1.2.1 Read the Dataset
 
-```{r}
-source("CleanEnv.R")
-```
-
 ```{r warning=FALSE,message=FALSE}
 # --------------------------------------------------------
 ## clear the environment var area
@@ -111,7 +107,7 @@ print(paste("Are there any missing values in the dataset? ", any_na))
 remove(any_na)
 ```
 
-### 1.3.2 **Summary Statistics**
+### 1.3.2 Summary Statistics
 
 ```{r}
 # Summary statistics for continuous variables
@@ -152,7 +148,7 @@ grid.arrange(bar.Trt, bar.Gender, bar.Size, bar.Hospital, ncol = 2)
 remove(bar.Trt, bar.Gender, bar.Size, bar.Hospital)
 ```
 
-### 1.3.3 **Distribution Analysis**
+### 1.3.3 Distribution Analysis
 
 ```{r warning=FALSE}
 # List of variable names to plot
@@ -256,7 +252,7 @@ ggplot(MST_long, aes(x = TimeStamp, y = StressScore,
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-### 1.3.6 **Temporal Trends**
+### 1.3.6 Temporal Trends
 
 ```{r message=FALSE, warning=FALSE}
 # Plotting temporal trends
@@ -284,7 +280,7 @@ ggplot(MST_long,
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-### 1.3.7 **Categorical Variable Analysis**
+### 1.3.7 Categorical Variable Analysis
 
 ```{r}
 # Scatterplot of Experience vs. StressScore, colored by Treatment Group
@@ -369,7 +365,7 @@ The Shapiro-Wilk test is a common test for normality. P-value is less than 0.05,
 
 ## 2.1 Multilevel models for MST Dataset
 
-### 2.1.1 **Multilevel Models Overview**
+### 2.1.1 Multilevel Models Overview
 
 Multilevel models, also known as hierarchical linear models or mixed-effects models, are a class of statistical models designed to analyze data with a nested or hierarchical structure. These models are particularly relevant for datasets where observations are grouped at more than one level, such as our case, repeated stress measurements within nurses who are, in turn, nested within hospitals.
 
@@ -379,11 +375,11 @@ Multilevel models, also known as hierarchical linear models or mixed-effects mod
 
 Multilevel models (MLMs) are crucial for analyzing the MST dataset's hierarchical structure, effectively addressing the correlations within grouped data. By acknowledging the nesting of measurements within individuals and hospitals, MLMs prevent the underestimation of standard errors that could lead to incorrect significance claims. They meticulously partition variance to reveal the sources influencing outcomes, integrating both fixed effects, such as the overall intervention impact, and random effects that capture variability at individual and group levels. This approach enables a comprehensive assessment of interventions in varied contexts. Overlooking the dataset's hierarchical nature risks missing key insights and making inaccurate conclusions, particularly regarding how group characteristics like hospital policies may affect results. Therefore, MLMs are indispensable for ensuring the robustness and relevance of findings in nested data analyses.
 
-## 2.2 Generalized Linear Mixed Model for MLM
+## 2.2 Generalized Linear Mixed Model for MLM (Model Assumption)
 
 According to fit the model, I choose Generalized Linear Mixed Model (GLMM), the reasons are shown below:
 
--   Limitation of Traditional Linear Model: Unlike traditional linear models that assume normally distributed residuals, GLMM can handle various types of distributions for the response variable (Poisson for count data, etc.), which is essential for modeling the positive integer nature of stress scores. In Section 1.3.2, we found that the Stress Scores of nurses we want to fit are positive integers (count data, not continuous data).
+-   Limitation of Traditional Linear Model: Unlike traditional linear models that assume normally distributed residuals, GLMM can handle various types of distributions for the response variable (Poisson for count data, etc.). **And in section 1.3.5 and 1.5, it shows that the StressScore we want to predict obeys Gaussian Distribution.**
 
 -   Hierarchical Structure and Longitudinal Data: A nested structure with multiple levels (Repeated measures within nurses, nurses within hospitals)
 
@@ -393,24 +389,56 @@ According to fit the model, I choose Generalized Linear Mixed Model (GLMM), the 
 
 Decomposing variance in a multilevel model involves quantifying how much of the total variability in the outcome is attributable to differences at each level of the hierarchy. One key measure used in this context is the Intra-class Correlation Coefficient (ICC), which provides an estimate of the proportion of the total variance that is due to the grouping structure.
 
+High ICC values highlight the importance of multilevel modeling. Testing for significant variance components involves likelihood ratio tests to compare models with and against random effects at each level, guiding the inclusion of relevant variance components.
+
 **Steps for Decompose variance**
 
-1.  Using the MST_long (long format) to fit an empty GLMM
+1.  Using the MST_long (long format) to fit a **compared** empty GLMM:
 
-2.  Calculate the VPC
+    -   The family type of GLMM is **Gaussian** (mentioned in section 1.3.3 1.5 and 2.2).
+
+    -   The compared model need the following necessary elements: interaction between time and Trt (Level 1), Nurse (Level 2) and Hospital (Level 3).
+
+2.  Calculate the VPC and ICC
+
+    $$
+    VPC_{ID}=\frac{\sigma^2_{Hospital}}{\sigma^2_{Hospital}+\sigma^2_{Hospital:ID}+\sigma^2_e}
+    $$
+
+    $$
+    VPC_{Hospital:ID}=\frac{\sigma^2_{Hospital:ID}}{\sigma^2_{Hospital}+\sigma^2_{Hospital:ID}+\sigma^2_e}
+    $$
+
+    $$
+    ICC = \frac{\sigma^2_{between}}{\sigma^2_{between} + \sigma^2_{within}}
+    $$
+
+## 2.4 Methodological Approach
+
+Here, we can use **half-way in** method to build the Model (Build a compared simple model and after that add fixed effects, interaction and random effects step by step). When add a new random effect, using **ranova()** to validate if it deserves (p-value). In addtion, using **anova()** (p-value as well) between models to compare which is better. Model efficacy is then evaluated using likelihood ratio tests alongside AIC/BIC criteria, ensuring the inclusion of meaningful variance components and optimizing model fit.
 
 # Part 3 Analysis
+
+Modeling Questions:
+
+-   The significance of Intervention and its effect.
+
+-   The different effect of Intervention between Hospitals.
+
+-   The effect of Intervention over time.
+
+-   Other covariates in the model.
 
 ## 3.1 Determine the level of Model
 
 ### 3.1.1 Build an empty GLMM with Random Effects
 
-```{r}
-MST_long$ID <- as.factor(MST_long$ID)
+model 0: only care about the interaction between Trt\*Time and Multi-Level (a change of the intervention effect over time) (**Trt.f \* Time = Trt.f + Time + Trt.f:Time**)
 
+```{r}
 ## Empty model with longitudinal data
-Model.0 <- glmer(
-  StressScore ~ Trt.f * Time + (1 | Hospital) + (1 | Hospital:ID),
+Model.0 = glmer(
+  StressScore ~ Trt.f * Time + (1 | Hospital.f:ID.f) + (1 | Hospital.f),
   data = MST_long,
   family = gaussian(link = "identity")
 )
@@ -428,9 +456,9 @@ REsummary
 ```{r}
 # Residual variance
 sig <- REsummary$vcov[3]
-# RE variance for Hospital
+# Variance for Hospital
 sigv <- REsummary$vcov[2]
-# RE variance for ID:Hospital
+# Variance for ID
 sigu <- REsummary$vcov[1]
 # total variance
 totalvar <- sum(REsummary$vcov)
@@ -445,7 +473,219 @@ icc.Hospital <- sigv / totalvar
 icc.ID <- (sigu + sigv) / totalvar
 ```
 
+```{r}
+icc.Hospital
+```
+
+```{r}
+icc.ID
+```
+
+We can see high ICCs in Hospital and Nurse level. That means this two levels explain a substantial part of the variance in the outcome measure. So we make our model with 3-levels. And we can say there exists heterogeneity of the intervention effect between hospitals.
+
+## 3.2 Only Time and Trt in Model (without Interaction)
+
+```{r}
+Model.1 = lmer(
+  StressScore ~ Trt.f + Time + (1 | Hospital.f:ID.f) + (1 | Hospital.f),
+  data = MST_long,
+)
+```
+
+```{r}
+# Compare Model.0 and Model.1 (with without Interaction between Time and Trt)
+anova(Model.0, Model.1)
+```
+
+This indicate it exist a change of the intervention effect over time.
+
+## 3.3 Only Time and Trt's Interaction
+
+```{r}
+Model.2 = lmer(
+  StressScore ~ Trt.f:Time + (1 | Hospital.f:ID.f) + (1 | Hospital.f),
+  data = MST_long,
+)
+```
+
+```{r}
+# Compare Model.0 and Model.1 (with Time)
+anova(Model.0, Model.2)
+```
+
+The intervention effect is significant!
+
+## 3.4 Add other covariates as Fixed Effect
+
+```{r}
+# Model.3 add Experience
+Model.3 = lmer(
+  StressScore ~ Trt.f*Time + Experience +
+    (1 | Hospital.f:ID.f) + (1 | Hospital.f),
+  data = MST_long,
+)
+```
+
+```{r}
+# Compare Model.0 and Model.3
+anova(Model.0, Model.3)
+```
+
+I put the other model and comparison in the **Appendix 1**, after test all the possible combination, the best model till now is **Model.5**:
+
+```{r}
+Model.5 = lmer(
+  StressScore ~ Trt.f*Time + Experience + Gender.f + Size.f +
+    (1 | Hospital.f:ID.f) + (1 | Hospital.f),
+  data = MST_long,
+)
+```
+
+## 3.5 Add Random Effects to the Model
+
+```{r}
+Model.6 = lmer(
+  StressScore ~ Trt.f*Time + Experience + Gender.f + Size.f +
+    (1 | Hospital.f:ID.f) + (Trt.f | Hospital.f),
+  data = MST_long,
+)
+```
+
+```{r}
+ranova(Model.6)
+```
+
+```{r}
+anova(Model.5, Model.6)
+```
+
+This is also the example of model building. I put the other try in **Appendix 2**.
+
+From Model.7 to Model.9, I cannot find a Model better than **Model.5**.
+
+## 3.6 Final Model Router
+
+![Model Roadmap](Pic/Final%20Model%20Router.png)
+
 # Part 4 Discussion of results
+
+## 4.1 Conclusions of Model 0-9
+
+Like what section 3.6 shows, I summarize the Model 0-9 here:
+
+-   Model 0: Only Trt.f\*Time in the fix effect, calculating the VPC and ICC. **Important Conclusion: significant difference in intervention effect between hospitals.**
+
+-   Model 1: **Important Conclusion: Evidence of a change of the intervention effect over time.**
+
+-   Model 2: **Important Conclusion: intervention effect significant.**
+
+-   Model 3, 4, 5: Add Size.f, Experience, Gender.f. **Important Conclusion: These covariates have importance in explaining model.**
+
+-   Model 6,7,8,9: We cannot find any Random Slope in the Model.
+
+## 4.2 Summary of the Best Model (Model.5)
+
+### 4.2.1 Mathematical Model
+
+$$
+\begin{aligned}
+Y_{ijt} = & \ \beta_0 \\
+& + \beta_1 \cdot \text{Trt.f}_{ijt} \\
+& + \beta_2 \cdot \text{Time}_{ijt} \\
+& + \beta_3 \cdot (\text{Trt.f} \times \text{Time})_{ijt} \\
+& + \beta_4 \cdot \text{Experience}_{ij} \\
+& + \beta_5 \cdot \text{Gender.f}_{ij} \\
+& + \beta_6 \cdot \text{Size.f}_{j} \\
+& + u_{j0} \\
+& + u_{ij} \\
+& + \epsilon_{ijt}
+\end{aligned}
+$$
+
+-   $\text{Trt.f} \times \text{Time}$ represents the interaction term, which models the effect of the Treatment over Time.
+
+-   The random effects $u_{j0}$ and $u_{ij}$ are assumed to be normally distributed with mean zero and their respective variances.
+
+-   The residual errors $\epsilon_{ijt}$ are assumed to be independent and identically distributed normal random variables with mean zero and variance $\sigma^2$.
+
+### 4.2.2 Model Summary
+
+```{r}
+summary(Model.5)
+```
+
+### 4.2.3 Model.5 Diagnostics
+
+#### 4.2.3.1 Plot the Model Residuals
+
+```{r}
+# Model of Residuals
+ggplot(data.frame(Fitted = fitted(Model.5),
+                           Residuals = resid(Model.5)),
+       aes(x = Fitted, y = Residuals)) +
+  # Plot points with some transparency
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0,
+             linetype = "dashed",
+             color = "red") +  # Add a horizontal line at 0
+  labs(title = "Residual Plot for Model.5",
+       x = "Fitted Values", y = "Residuals")
+```
+
+#### 4.2.3.2 Q-Q plot of Residuals
+
+```{r}
+ggplot(data.frame(Residuals = resid(Model.5)),
+       aes(sample = Residuals)) +
+  # Creates the Q-Q plot
+  stat_qq() +
+  # Adds the theoretical Q-Q line
+  stat_qq_line(color = "red") +
+  labs(title = "Q-Q Plot of Residuals for Model.5",
+       x = "Theoretical Quantiles", y = "Sample Quantiles")
+```
+
+#### 4.2.3.3 Q-Q plot of Random Effects
+
+```{r}
+# Extract random effects
+ran_ef <- ranef(Model.5)$Hospital.f
+ran_ef_id <- ranef(Model.5)$`Hospital.f:ID.f`
+# Prepare data frames
+ran_ef_df <- data.frame(RandomEffects = ran_ef$`(Intercept)`)
+ran_ef_id_df <- data.frame(RandomEffects = ran_ef_id$`(Intercept)`)
+
+```
+
+```{r}
+ggplot(ran_ef_df, aes(sample = RandomEffects)) +
+  stat_qq() +
+  stat_qq_line(color = "red") +
+  labs(title = "Q-Q Plot of Random Effects (Hospital Level)",
+       x = "Theoretical Quantiles", y = "Sample Quantiles")
+```
+
+```{r}
+ggplot(ran_ef_id_df, aes(sample = RandomEffects)) +
+  stat_qq() +
+  stat_qq_line(color = "red") +
+  labs(title = "Q-Q Plot of Random Effects (ID within Hospital Level)",
+       x = "Theoretical Quantiles", y = "Sample Quantiles")
+```
+
+#### 4.2.3.4 Confidence intervals for the fixed effects
+
+```{r}
+confint(Model.5)
+```
+
+This represents the effect of the treatment (with the first level of `Trt.f` possibly being the reference category, and `Trt.f1` representing another category). The confidence interval (-6.088 to -4.385) suggests that the treatment is associated with a decrease in StressScore, and since zero is not within this interval, the effect is likely significant.
+
+## 4.3 Using Model to predict
+
+```{r}
+MST_long$Prediction = predict(Model.5)
+```
 
 # Word Count
 
@@ -465,36 +705,82 @@ text_stats()
 
 # Appendix
 
-## Appendix 1: Add/Del Variables in the model
+## Appendix 1: Add/Del Covariates in the model
 
 ```{r}
-MST_long_new$ID <- as.factor(MST_long$ID)
-MST_long_new$Hospital <- as.factor(MST_long$Hospital)
-MST_long_new$Time = as.numeric(MST_long$TimeStamp)
-
-model <- glmer(
-  StressScore ~ Trt + Time + Experience + Size + (Gender | Hospital:ID) + (1 | Hospital),
-  data = MST_long_new,
-  family = gaussian(link = "identity")
+# Model.4 add Gender.f
+Model.4 = lmer(
+  StressScore ~ Trt.f*Time + Experience + Gender.f +
+    (1 | Hospital.f:ID.f) + (1 | Hospital.f),
+  data = MST_long,
 )
-
-summary(model)
 ```
 
 ```{r}
-MST_long_new$Pred = predict(model)
+# Compare Model.4 and Model.3
+anova(Model.4, Model.3)
 ```
 
 ```{r}
-ggplot(MST_long_new, aes(Experience, StressScore)) +
-  geom_point(aes(Experience, StressScore, col=TimeStamp)) +
-  geom_line(aes(x=Experience, y=Pred, group=TimeStamp, col=TimeStamp))
+# Model.5 add Size.f
+Model.5 = lmer(
+  StressScore ~ Trt.f*Time + Experience + Gender.f + Size.f +
+    (1 | Hospital.f:ID.f) + (1 | Hospital.f),
+  data = MST_long,
+)
 ```
 
 ```{r}
-MST_long_new$Trt.f = as.factor(MST_long_new$Trt)
-ggplot(MST_long_new, aes(Experience, StressScore)) +
-  geom_point(aes(Experience, StressScore, col=Trt.f)) +
-  geom_line(aes(y=Pred, group=Trt.f, col=Trt.f)) +
-  theme(legend.position = "none")
+# Compare Model.5 and Model.4
+anova(Model.5, Model.4)
+```
+
+## Appendix 2: Add Random Effects to the Model
+
+```{r}
+Model.7 = lmer(
+  StressScore ~ Trt.f*Time + Experience + Gender.f + Size.f +
+    (1 | Hospital.f:ID.f) + (Trt.f*Time | Hospital.f),
+  data = MST_long,
+)
+```
+
+```{r}
+ranova(Model.7)
+```
+
+```{r}
+anova(Model.5, Model.7)
+```
+
+```{r}
+Model.8 = lmer(
+  StressScore ~ Trt.f*Time + Experience + Gender.f + Size.f +
+    (1 | Hospital.f:ID.f) + (Size.f | Hospital.f),
+  data = MST_long,
+)
+```
+
+```{r}
+ranova(Model.8)
+```
+
+```{r}
+anova(Model.5, Model.8)
+```
+
+```{r}
+Model.9 = lmer(
+  StressScore ~ Trt.f*Time + Experience + Gender.f + Size.f +
+    (Gender.f | Hospital.f:ID.f) + (1 | Hospital.f),
+  data = MST_long,
+)
+```
+
+```{r}
+ranova(Model.9)
+```
+
+```{r}
+anova(Model.5, Model.9)
 ```
