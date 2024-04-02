@@ -616,6 +616,8 @@ summary(Model.5)
 
 ### 4.2.3 Model.5 Residual Diagnostics
 
+Our model assumes normal distributions for both the random effects and the residual errors.
+
 ```{r}
 # Model of Residuals
 ggplot(data.frame(Fitted = fitted(Model.5),
@@ -632,6 +634,10 @@ ggplot(data.frame(Fitted = fitted(Model.5),
 
 The Residuals seems satisfied the normal distribution.
 
+$$
+\epsilon_{ijt} \sim N(0, \sigma^2_{e}) 
+$$
+
 ```{r}
 ggplot(data.frame(Residuals = resid(Model.5)),
        aes(sample = Residuals)) +
@@ -643,7 +649,7 @@ ggplot(data.frame(Residuals = resid(Model.5)),
        x = "Theoretical Quantiles", y = "Sample Quantiles")
 ```
 
-Q-Q plot of Random Effects
+**Q-Q plot of Random Effects:**
 
 ```{r}
 # # Extract random effects
@@ -654,6 +660,12 @@ ran_ef_df <- data.frame(RandomEffects = ran_ef$`(Intercept)`)
 ran_ef_id_df <- data.frame(RandomEffects = ran_ef_id$`(Intercept)`)
 ```
 
+Hospital Level's Residual Diagnostics (whether $u_{j0}$ satisfied Gaussian Distribution or not)
+
+$$
+u_{j0} \sim N(0, \sigma^2_{Hospital})
+$$
+
 ```{r}
 ggplot(ran_ef_df, aes(sample = RandomEffects)) +
   stat_qq() +
@@ -661,6 +673,12 @@ ggplot(ran_ef_df, aes(sample = RandomEffects)) +
   labs(title = "Q-Q Plot of Random Effects (Hospital Level)",
        x = "Theoretical Quantiles", y = "Sample Quantiles")
 ```
+
+ID within Hospital Level Diagnostics (whether $u_{ij}$ satisfied Gaussian Distribution or not)
+
+$$
+u_{ij} \sim N(0,\sigma^2_{Hospital:ID})
+$$
 
 ```{r}
 ggplot(ran_ef_id_df, aes(sample = RandomEffects)) +
